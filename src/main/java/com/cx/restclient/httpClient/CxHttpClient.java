@@ -1,16 +1,45 @@
 package com.cx.restclient.httpClient;
 
-import com.cx.restclient.common.ErrorMessage;
-import com.cx.restclient.dto.LoginSettings;
-import com.cx.restclient.dto.ProxyConfig;
-import com.cx.restclient.dto.TokenLoginResponse;
-import com.cx.restclient.exception.CxClientException;
-import com.cx.restclient.exception.CxHTTPClientException;
-import com.cx.restclient.exception.CxTokenExpiredException;
-import com.cx.restclient.osa.dto.ClientType;
-import com.google.gson.Gson;
+import static com.cx.restclient.common.CxPARAM.CSRF_TOKEN_HEADER;
+import static com.cx.restclient.common.CxPARAM.ORIGIN_HEADER;
+import static com.cx.restclient.common.CxPARAM.REVOCATION;
+import static com.cx.restclient.common.CxPARAM.SSO_AUTHENTICATION;
+import static com.cx.restclient.common.CxPARAM.TEAM_PATH;
+import static com.cx.restclient.httpClient.utils.ContentType.CONTENT_TYPE_APPLICATION_JSON;
+import static com.cx.restclient.httpClient.utils.HttpClientHelper.convertToObject;
+import static com.cx.restclient.httpClient.utils.HttpClientHelper.extractResponseBody;
+import static com.cx.restclient.httpClient.utils.HttpClientHelper.validateResponse;
+
+import java.io.Closeable;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.UnknownHostException;
+import java.nio.charset.StandardCharsets;
+import java.security.KeyManagementException;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.text.MessageFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.regex.PatternSyntaxException;
+
+import javax.annotation.Nullable;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+
 import org.apache.commons.lang3.StringUtils;
-import org.apache.http.*;
+import org.apache.http.Header;
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpException;
+import org.apache.http.HttpHeaders;
+import org.apache.http.HttpHost;
+import org.apache.http.HttpRequest;
+import org.apache.http.HttpResponse;
+import org.apache.http.HttpStatus;
+import org.apache.http.NameValuePair;
 import org.apache.http.auth.AuthSchemeProvider;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.NTCredentials;
@@ -22,11 +51,19 @@ import org.apache.http.client.config.AuthSchemes;
 import org.apache.http.client.config.CookieSpecs;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
-import org.apache.http.client.methods.*;
+import org.apache.http.client.methods.HttpEntityEnclosingRequestBase;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPatch;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpPut;
+import org.apache.http.client.methods.HttpRequestBase;
+import org.apache.http.client.methods.HttpUriRequest;
+import org.apache.http.client.methods.RequestBuilder;
 import org.apache.http.client.params.AuthPolicy;
 import org.apache.http.client.utils.HttpClientUtils;
 import org.apache.http.config.Registry;
 import org.apache.http.config.RegistryBuilder;
+import org.apache.http.conn.routing.HttpRoute;
 import org.apache.http.conn.socket.ConnectionSocketFactory;
 import org.apache.http.conn.socket.PlainConnectionSocketFactory;
 import org.apache.http.conn.ssl.NoopHostnameVerifier;
@@ -42,40 +79,41 @@ import org.apache.http.impl.auth.DigestSchemeFactory;
 import org.apache.http.impl.auth.win.WindowsCredentialsProvider;
 import org.apache.http.impl.auth.win.WindowsNTLMSchemeFactory;
 import org.apache.http.impl.auth.win.WindowsNegotiateSchemeFactory;
-import org.apache.http.impl.client.*;
+import org.apache.http.impl.client.BasicCookieStore;
+import org.apache.http.impl.client.BasicCredentialsProvider;
+import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.impl.client.ProxyAuthenticationStrategy;
+import org.apache.http.impl.client.SystemDefaultCredentialsProvider;
 import org.apache.http.impl.conn.DefaultProxyRoutePlanner;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.message.BasicHeader;
 import org.apache.http.message.BasicNameValuePair;
+import org.apache.http.protocol.HttpContext;
 import org.apache.http.ssl.SSLContextBuilder;
 import org.apache.http.ssl.SSLContexts;
 import org.apache.http.ssl.TrustStrategy;
 import org.slf4j.Logger;
 
-import javax.annotation.Nullable;
-import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.SSLContext;
-import java.io.Closeable;
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.net.UnknownHostException;
-import java.nio.charset.StandardCharsets;
-import java.security.KeyManagementException;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.text.MessageFormat;
-import java.util.*;
-
-import static com.cx.restclient.common.CxPARAM.*;
-import static com.cx.restclient.httpClient.utils.ContentType.CONTENT_TYPE_APPLICATION_JSON;
-import static com.cx.restclient.httpClient.utils.HttpClientHelper.*;
+import com.cx.restclient.common.ErrorMessage;
+import com.cx.restclient.dto.LoginSettings;
+import com.cx.restclient.dto.ProxyConfig;
+import com.cx.restclient.dto.TokenLoginResponse;
+import com.cx.restclient.exception.CxClientException;
+import com.cx.restclient.exception.CxHTTPClientException;
+import com.cx.restclient.exception.CxTokenExpiredException;
+import com.cx.restclient.osa.dto.ClientType;
+import com.google.gson.Gson;
 
 
 /**
  * Created by Galn on 05/02/2018.
  */
 public class CxHttpClient implements Closeable {
-
+	
+	private static String HTTP_NO_HOST = System.getProperty("http.nonProxyHosts");
+	private static String HTTPS_NO_HOST = System.getProperty("https.nonProxyHosts");
+	
     private static final String HTTPS = "https";
 
     private static final String LOGIN_FAILED_MSG = "Fail to login with windows authentication: ";
@@ -311,9 +349,34 @@ public class CxHttpClient implements Closeable {
 
         logi.info("Setting proxy for Checkmarx http client");
         cb.setProxy(proxy);
-        cb.setRoutePlanner(new DefaultProxyRoutePlanner(proxy));
+        cb.setRoutePlanner(getRoutePlanner(proxy, logi));
         cb.setProxyAuthenticationStrategy(new ProxyAuthenticationStrategy());
         return true;
+    }
+
+    private static DefaultProxyRoutePlanner getRoutePlanner(HttpHost proxyHost, Logger logi) {
+        return new DefaultProxyRoutePlanner(proxyHost) {
+            public HttpRoute determineRoute(
+                    final HttpHost host,
+                    final HttpRequest request,
+                    final HttpContext context) throws HttpException {
+                String hostname = host.getHostName();
+                String noHost = StringUtils.isNotEmpty(HTTP_NO_HOST) ? HTTP_NO_HOST : HTTPS_NO_HOST;
+                if (StringUtils.isNotEmpty(noHost)) {
+                    String[] hosts = noHost.split("\\|");
+                    for (String nonHost : hosts) {
+                        try {
+                            if (hostname.matches(nonHost)) {
+                                System.out.println("Host matched: " + nonHost);
+                            }
+                        } catch (PatternSyntaxException e) {
+                            logi.warn("Wrong nonProxyHost param: " + nonHost);
+                        }
+                    }
+                }
+                return super.determineRoute(host, request, context);
+            }
+        };
     }
 
     private static SSLConnectionSocketFactory getTrustAllSSLSocketFactory() {

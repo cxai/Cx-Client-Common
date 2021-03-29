@@ -1,21 +1,23 @@
 package com.cx.restclient.sast.utils;
 
-import com.cx.restclient.exception.CxClientException;
-import com.cx.restclient.sast.dto.CxXMLResults;
-import com.cx.restclient.sast.dto.SASTResults;
-import com.sun.xml.bind.v2.JAXBContextFactory;
-import org.apache.commons.io.FileUtils;
-import org.slf4j.Logger;
+import static com.cx.restclient.common.CxPARAM.CX_REPORT_LOCATION;
 
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.JAXBException;
-import javax.xml.bind.Unmarshaller;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
 
-import static com.cx.restclient.common.CxPARAM.CX_REPORT_LOCATION;
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.JAXBException;
+import javax.xml.bind.Unmarshaller;
+
+import org.apache.commons.io.FileUtils;
+import org.slf4j.Logger;
+
+import com.cx.restclient.exception.CxClientException;
+import com.cx.restclient.sast.dto.CxXMLResults;
+import com.cx.restclient.sast.dto.SASTResults;
+import com.sun.xml.bind.v2.ContextFactory;
 
 /**
  * Created by Galn on 07/02/2018.
@@ -26,9 +28,8 @@ public abstract class SASTUtils {
         CxXMLResults reportObj = null;
         try (ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(cxReport)) {
 
-            JAXBContextFactory jaxbContextFactory = new JAXBContextFactory();
-            JAXBContext jaxbContext = jaxbContextFactory.createContext(CxXMLResults.class.getPackage().getName(),
-                    CxXMLResults.class.getClassLoader(), Collections.<String, Object>emptyMap());
+              JAXBContext jaxbContext = ContextFactory.createContext(CxXMLResults.class.getPackage().getName(),                    
+                       CxXMLResults.class.getClassLoader(), Collections.<String, Object>emptyMap());
             Unmarshaller unmarshaller = jaxbContext.createUnmarshaller();
 
             reportObj = (CxXMLResults) unmarshaller.unmarshal(byteArrayInputStream);
