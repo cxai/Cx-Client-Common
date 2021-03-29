@@ -24,6 +24,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
 import javax.annotation.Nullable;
@@ -349,25 +351,26 @@ public class CxHttpClient implements Closeable {
 
         logi.info("Setting proxy for Checkmarx http client");
         cb.setProxy(proxy);
-        cb.setRoutePlanner(getRoutePlanner(proxy, logi));
+        cb.setRoutePlanner(getRoutePlanner(proxyConfig, proxy, logi));
         cb.setProxyAuthenticationStrategy(new ProxyAuthenticationStrategy());
         return true;
     }
 
-    private static DefaultProxyRoutePlanner getRoutePlanner(HttpHost proxyHost, Logger logi) {
+    private static DefaultProxyRoutePlanner getRoutePlanner(ProxyConfig proxyConfig, HttpHost proxyHost, Logger logi) {
         return new DefaultProxyRoutePlanner(proxyHost) {
             public HttpRoute determineRoute(
                     final HttpHost host,
                     final HttpRequest request,
-                    final HttpContext context) throws HttpException {
+                    final HttpContext context) throws HttpException {  
                 String hostname = host.getHostName();
-                String noHost = StringUtils.isNotEmpty(HTTP_NO_HOST) ? HTTP_NO_HOST : HTTPS_NO_HOST;
+                String noHost = proxyConfig.getNoproxyHosts(); // StringUtils.isNotEmpty(HTTP_NO_HOST) ? HTTP_NO_HOST : HTTPS_NO_HOST;
                 if (StringUtils.isNotEmpty(noHost)) {
                     String[] hosts = noHost.split("\\|");
                     for (String nonHost : hosts) {
                         try {
-                            if (hostname.matches(nonHost)) {
-                                System.out.println("Host matched: " + nonHost);
+                            if (matchNonProxyHostWildCard(hostname, noHost)) {
+                            	logi.debug("Bypassing proxy as host " + hostname + " is found in the nonProxyHosts");
+                                return new HttpRoute(host); 
                             }
                         } catch (PatternSyntaxException e) {
                             logi.warn("Wrong nonProxyHost param: " + nonHost);
@@ -378,6 +381,23 @@ public class CxHttpClient implements Closeable {
             }
         };
     }
+    
+    /*
+	 * '*' is the only wildcard support in nonProxyHosts JVM argument.
+	 *  * in Java regex has different meaning than required here.
+	 *  Hence the custom logic
+	 */
+	private static boolean matchNonProxyHostWildCard(String sourceHost, String nonProxyHost) {
+		if(nonProxyHost.indexOf("*")> -1)
+			nonProxyHost = nonProxyHost.replaceAll("\\.", "\\\\.");
+		
+		nonProxyHost = nonProxyHost.replaceAll("\\*", "\\.\\*");
+			
+		Pattern p = Pattern.compile(nonProxyHost);//. represents single character  
+		Matcher m = p.matcher(sourceHost);  
+		return m.matches();  
+	}
+	
 
     private static SSLConnectionSocketFactory getTrustAllSSLSocketFactory() {
         TrustStrategy acceptingTrustStrategy = new TrustAllStrategy();
