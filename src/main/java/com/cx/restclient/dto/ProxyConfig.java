@@ -9,8 +9,17 @@ public class ProxyConfig implements Serializable {
     private String username;
     private String password;
     private boolean useHttps;
+    private String noproxyHosts;
 
-    public ProxyConfig() {
+    public String getNoproxyHosts() {
+		return noproxyHosts;
+	}
+
+	public void setNoproxyHosts(String noproxyHosts) {
+		this.noproxyHosts = noproxyHosts;
+	}
+
+	public ProxyConfig() {
     }
 
     public ProxyConfig(String host, int port, String username, String password, boolean useHttps) {
@@ -19,8 +28,23 @@ public class ProxyConfig implements Serializable {
         this.username = username;
         this.password = password;
         this.useHttps = useHttps;
+        this.noproxyHosts = "";
     }
-
+    /**
+     * TO be used in Bamboo plugin for the time being
+     * @param host
+     * @param port
+     * @param username
+     * @param password
+     * @param useHttps
+     */
+    public ProxyConfig(String host, int port, String username, String password, boolean useHttps, String noProxyHosts){
+        this.port = port;
+        this.username = username;
+        this.password = password;
+        this.useHttps = useHttps;
+        this.noproxyHosts = noProxyHosts;
+    }
     public String getHost() {
         return host;
     }
