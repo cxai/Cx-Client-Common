@@ -1,14 +1,20 @@
 package com.cx.restclient.ast.dto.sca;
 
+import java.io.Serializable;
+import java.util.List;
+import java.util.Map;
+
 import com.cx.restclient.ast.dto.common.ASTConfig;
+
 import lombok.Getter;
 import lombok.Setter;
-
-import java.io.Serializable;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @Getter
 @Setter
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class AstScaConfig extends ASTConfig implements Serializable {
+
     private String accessControlUrl;
     private String username;
     private String password;
@@ -25,4 +31,11 @@ public class AstScaConfig extends ASTConfig implements Serializable {
     private String fingerprintsIncludePattern;
     private String manifestsIncludePattern;
     private String fingerprintFilePath;
+    private String sastProjectId;
+    private String sastServerUrl;
+    private String sastUsername;
+    private String sastPassword;
+    private Map<String,String> envVariables;
+    private List<String> configFilePaths;
+
 }
