@@ -2,6 +2,7 @@ package com.cx.restclient.cxArm.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
+import java.io.Serializable;
 import java.util.Date;
 
 import static com.cx.restclient.common.ShragaUtils.formatDate;
@@ -10,7 +11,7 @@ import static com.cx.restclient.common.ShragaUtils.formatDate;
  * Created by Galn on 7/5/2018.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class Violation {
+public class Violation implements Serializable {
     private String ruleId;
 
     private String ruleName;
@@ -46,9 +47,6 @@ public class Violation {
     private String state;
 
     private String policyName;
-
-    private String detectionDate;
-
 
     public String getRuleId() {
         return ruleId;
@@ -192,17 +190,5 @@ public class Violation {
 
     public void setPolicyName(String policyName) {
         this.policyName = policyName;
-    }
-
-    public String getDetectionDate() {
-        if (detectionDate == null){
-            String date = new Date(firstDetectionDateByArm).toString();
-            detectionDate = formatDate(date, "E MMM dd hh:mm:ss Z yyyy", "dd/MM/yy");
-        }
-        return detectionDate;
-    }
-
-    public void setDetectionDate(String detectionDate) {
-        this.detectionDate = detectionDate;
     }
 }

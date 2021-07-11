@@ -1,7 +1,7 @@
 package com.cx.restclient.sast.dto;
 
 import com.cx.restclient.cxArm.dto.Policy;
-import com.cx.restclient.cxArm.dto.Violation;
+import com.cx.restclient.dto.Results;
 
 import java.io.Serializable;
 import java.text.DateFormat;
@@ -9,6 +9,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
+import static com.cx.restclient.cxArm.utils.CxARMUtils.getPolicyList;
 import static com.cx.restclient.sast.utils.SASTParam.PROJECT_LINK_FORMAT;
 import static com.cx.restclient.sast.utils.SASTParam.SCAN_LINK_FORMAT;
 
@@ -16,7 +17,7 @@ import static com.cx.restclient.sast.utils.SASTParam.SCAN_LINK_FORMAT;
 /**
  * Created by Galn on 05/02/2018.
  */
-public class SASTResults implements Serializable {
+public class SASTResults extends Results implements Serializable {
 
     private long scanId;
 
@@ -35,10 +36,10 @@ public class SASTResults implements Serializable {
     private String sastProjectLink;
     private String sastPDFLink;
 
-    private String scanStart;
-    private String scanTime;
-    private String scanStartTime;
-    private String scanEndTime;
+    private String scanStart = "";
+    private String scanTime = "";
+    private String scanStartTime = "";
+    private String scanEndTime = "";
 
     private String filesScanned;
     private String LOC;
@@ -48,8 +49,7 @@ public class SASTResults implements Serializable {
     private byte[] PDFReport;
     private String pdfFileName;
 
-    private List<String> sastPolicies = new ArrayList<>();
-    private List<Violation> sastViolations = new ArrayList<>();
+    private List<Policy> sastPolicies = new ArrayList<>();
 
 
     public enum Severity {
@@ -99,6 +99,10 @@ public class SASTResults implements Serializable {
         setInformation(statisticsResults.getInfoSeverity());
         setSastScanLink(url, scanId, projectId);
         setSastProjectLink(url, projectId);
+    }
+
+    public void addPolicy(Policy policy) {
+        this.sastPolicies.addAll(getPolicyList(policy));
     }
 
     public long getScanId() {
@@ -327,14 +331,23 @@ public class SASTResults implements Serializable {
         return new SimpleDateFormat(displayDatePattern, locale).format(date);
     }
 
-    private Date createStartDate(String scanStart) throws ParseException {
-        //"Sunday, February 26, 2017 12:17:09 PM"
-        String oldPattern = "EEEE, MMMM dd, yyyy hh:mm:ss a";
-        Locale locale = Locale.ENGLISH;
+    private Date createStartDate(String scanStart) throws Exception {
+        DateFormat formatter;
+        Date formattedDate = null;
 
-        DateFormat oldDateFormat = new SimpleDateFormat(oldPattern, locale);
+        for (SupportedLanguage lang : SupportedLanguage.values()) {
+            try {
+                formatter = new SimpleDateFormat(lang.getFormat(), lang.getLocale());
+                formattedDate = formatter.parse(scanStart);
+                break;
+            } catch (Exception ignored) {
+            }
+        }
 
-        return oldDateFormat.parse(scanStart);
+        if(formattedDate == null){
+            throw new Exception(String.format("Failed parsing date [%s]", scanStart));
+        }
+        return formattedDate;
     }
 
     private Date createTimeDate(String scanTime) throws ParseException {
@@ -348,27 +361,16 @@ public class SASTResults implements Serializable {
     }
 
     private Date createEndDate(Date scanStartDate, Date scanTimeDate) {
-        long time /*no c*/ = scanStartDate.getTime() + scanTimeDate.getTime();
+        long time = scanStartDate.getTime() + scanTimeDate.getTime();
         return new Date(time);
     }
 
-    public List<Violation> getSastViolations() {
-        return sastViolations;
-    }
-
-    public void setSastViolations(List<Violation> sastViolations) {
-        this.sastViolations = sastViolations;
-    }
-
-    public void addAllViolations(List<Violation> violations) {
-        this.sastViolations.addAll(violations);
-    }
-
-    public List<String> getSastPolicies() {
+    public List<Policy> getSastPolicies() {
         return sastPolicies;
     }
 
-    public void setSastPolicies(List<String> sastPolicies) {
+    public void setSastPolicies(List<Policy> sastPolicies) {
         this.sastPolicies = sastPolicies;
     }
+
 }

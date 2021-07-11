@@ -1,69 +1,65 @@
 package com.cx.restclient.dto;
 
 
+import com.cx.restclient.ast.dto.sast.AstSastResults;
+import com.cx.restclient.ast.dto.sca.AstScaResults;
+import com.cx.restclient.exception.CxClientException;
 import com.cx.restclient.osa.dto.OSAResults;
 import com.cx.restclient.sast.dto.SASTResults;
 
 import java.io.Serializable;
+import java.util.EnumMap;
+import java.util.Map;
 
-public class ScanResults implements Serializable {
+public class ScanResults extends Results implements Serializable {
+    private final Map<ScannerType, Results> resultsMap = new EnumMap<>(ScannerType.class);
 
-    private SASTResults sastResults;
-    private OSAResults osaResults;
+    private Exception generalException = null;
 
-    private Exception sastCreateException = null;
-    private Exception sastWaitException = null;
-    private Exception osaCreateException = null;
-    private Exception osaWaitException = null;
-
-    public ScanResults() {
+    public Map<ScannerType, Results> getResults(){
+        return resultsMap;
+    }
+    
+    public void put(ScannerType type, Results results) {
+        if(resultsMap.containsKey(type)){
+            throw new CxClientException("Results already contain type " + type);
+        }
+        resultsMap.put(type, results);
     }
 
-    public SASTResults getSastResults() {
-        return sastResults;
+    public Map<ScannerType, Results> getResultsMap() {
+        return resultsMap;
     }
 
-    public void setSastResults(SASTResults sastResults) {
-        this.sastResults = sastResults;
+    public Results get(ScannerType type) {
+        return resultsMap.get(type);
     }
+
 
     public OSAResults getOsaResults() {
-        return osaResults;
+        return (OSAResults)resultsMap.get(ScannerType.OSA);
     }
 
-    public void setOsaResults(OSAResults osaResults) {
-        this.osaResults = osaResults;
+    public AstSastResults getAstResults() {
+        return (AstSastResults)resultsMap.get(ScannerType.AST_SAST);
     }
 
-    public Exception getSastCreateException() {
-        return sastCreateException;
+    public AstScaResults getScaResults() {
+        return (AstScaResults)resultsMap.get(ScannerType.AST_SCA);
     }
 
-    public void setSastCreateException(Exception sastCreateException) {
-        this.sastCreateException = sastCreateException;
+
+    public SASTResults getSastResults() {
+        return (SASTResults)resultsMap.get(ScannerType.SAST);
+
     }
 
-    public Exception getSastWaitException() {
-        return sastWaitException;
+    public Exception getGeneralException() {
+        return generalException;
     }
 
-    public void setSastWaitException(Exception sastWaitException) {
-        this.sastWaitException = sastWaitException;
+    public void setGeneralException(Exception generalException) {
+        this.generalException = generalException;
     }
 
-    public Exception getOsaCreateException() {
-        return osaCreateException;
-    }
-
-    public void setOsaCreateException(Exception osaCreateException) {
-        this.osaCreateException = osaCreateException;
-    }
-
-    public Exception getOsaWaitException() {
-        return osaWaitException;
-    }
-
-    public void setOsaWaitException(Exception osaWaitException) {
-        this.osaWaitException = osaWaitException;
-    }
 }

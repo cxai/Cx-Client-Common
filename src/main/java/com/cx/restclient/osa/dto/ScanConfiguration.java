@@ -2,16 +2,17 @@ package com.cx.restclient.osa.dto;
 
 
 import com.cx.restclient.sast.dto.Project;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import java.io.File;
 
 /**
  * Created by galn on 21/12/2016.
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class ScanConfiguration {
 
     private boolean SASTEnabled;
-    private String OSAEnabled;
     private String cxOrigin;
     private String sourceDir;
     private String tempDir;
@@ -58,14 +59,6 @@ public class ScanConfiguration {
 
     public void setSASTEnabled(boolean SASTEnabled) {
         this.SASTEnabled = SASTEnabled;
-    }
-
-    public String getOSAEnabled() {
-        return OSAEnabled;
-    }
-
-    public void setOSAEnabled(String OSAEnabled) {
-        this.OSAEnabled = OSAEnabled;
     }
 
     public String getCxOrigin() {

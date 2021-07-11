@@ -1,34 +1,35 @@
 package com.cx.restclient.sast.utils.zip;
 
 
-import com.cx.restclient.common.ShragaUtils;
 import com.cx.restclient.configuration.CxScanConfig;
+import com.cx.restclient.dto.PathFilter;
+import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.List;
-import java.util.Map;
 
+import static com.cx.restclient.sast.utils.SASTParam.MAX_ZIP_SIZE_BYTES;
 import static com.cx.restclient.sast.utils.SASTParam.TEMP_FILE_NAME_TO_ZIP;
 
 
 /**
  * CxZipUtils generates the patterns used for zipping the workspace folder
  */
-
-
 public abstract class CxZipUtils {
 
-    public static File zipWorkspaceFolder(CxScanConfig config, long maxZipBytes, Logger log) throws IOException {
-        Map<String, List<String>> stringListMap = ShragaUtils.generateIncludesExcludesPatternLists(config.getSastFolderExclusions(), config.getSastFilterPattern(), log);
-        List<String> includes = stringListMap.get(ShragaUtils.INCLUDES_LIST);
-        List<String> excludes = stringListMap.get(ShragaUtils.EXCLUDES_LIST);
+    public synchronized static byte[] getZippedSources(CxScanConfig config, PathFilter filter, String sourceDir, Logger log) throws IOException {
+        byte[] zipFile = config.getZipFile() != null ? FileUtils.readFileToByteArray(config.getZipFile()) : null;
+        if (zipFile == null) {
+            log.debug("----------------------------------- Start zipping files :------------------------------------");
+            Long maxZipSize = config.getMaxZipSize() != null ? config.getMaxZipSize() * 1024 * 1024 : MAX_ZIP_SIZE_BYTES;
 
-        CxZip cxZip = new CxZip(TEMP_FILE_NAME_TO_ZIP, maxZipBytes, log);
-
-        return cxZip.zipWorkspaceFolder(new File(config.getSourceDir()), includes.toArray(new String[includes.size()]), excludes.toArray(new String[excludes.size()]));
-
+            CxZip cxZip = new CxZip(TEMP_FILE_NAME_TO_ZIP, maxZipSize, log);
+            zipFile = cxZip.zipWorkspaceFolder(new File(sourceDir), filter);
+            log.debug("----------------------------------- Finish zipping files :------------------------------------");
+        }
+        return zipFile;
     }
+
 }
 

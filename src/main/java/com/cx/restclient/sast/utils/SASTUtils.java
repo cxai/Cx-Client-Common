@@ -1,55 +1,46 @@
 package com.cx.restclient.sast.utils;
 
-import com.cx.restclient.exception.CxClientException;
-import com.cx.restclient.sast.dto.CxXMLResults;
-import com.cx.restclient.sast.dto.SASTResults;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
+import static com.cx.restclient.common.CxPARAM.CX_REPORT_LOCATION;
+
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.IOException;
+import java.util.Collections;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Unmarshaller;
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 
-import static com.cx.restclient.common.CxPARAM.CX_REPORT_LOCATION;
-import static com.cx.restclient.sast.utils.SASTParam.PDF_REPORT_NAME;
+import org.apache.commons.io.FileUtils;
+import org.slf4j.Logger;
+
+import com.cx.restclient.exception.CxClientException;
+import com.cx.restclient.sast.dto.CxXMLResults;
+import com.cx.restclient.sast.dto.SASTResults;
+import com.sun.xml.bind.v2.ContextFactory;
 
 /**
  * Created by Galn on 07/02/2018.
  */
 public abstract class SASTUtils {
 
-    public static void deleteTempZipFile(File zipTempFile, Logger log) {
-        if (zipTempFile.exists() && !zipTempFile.delete()) {
-            log.warn("Failed to delete temporary zip file: " + zipTempFile.getAbsolutePath());
-        } else {
-            log.info("Temporary file deleted");
-        }
-    }
-
     public static CxXMLResults convertToXMLResult(byte[] cxReport) throws CxClientException {
         CxXMLResults reportObj = null;
-        ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(cxReport);
-        try {
-            JAXBContext jaxbContext = JAXBContext.newInstance(CxXMLResults.class);
+        try (ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(cxReport)) {
+
+              JAXBContext jaxbContext = ContextFactory.createContext(CxXMLResults.class.getPackage().getName(),                    
+                       CxXMLResults.class.getClassLoader(), Collections.<String, Object>emptyMap());
             Unmarshaller unmarshaller = jaxbContext.createUnmarshaller();
 
             reportObj = (CxXMLResults) unmarshaller.unmarshal(byteArrayInputStream);
 
-        } catch (JAXBException e) {
+        } catch (JAXBException | IOException e) {
             throw new CxClientException("Failed to parse xml report: " + e.getMessage(), e);
-        } finally {
-            IOUtils.closeQuietly(byteArrayInputStream);
         }
         return reportObj;
     }
 
-    public static void printSASTResultsToConsole(SASTResults sastResults,boolean enableViolations, Logger log) {
+    public static void printSASTResultsToConsole(SASTResults sastResults, boolean enableViolations, Logger log) {
 
         String highNew = sastResults.getNewHigh() > 0 ? " (" + sastResults.getNewHigh() + " new)" : "";
         String mediumNew = sastResults.getNewMedium() > 0 ? " (" + sastResults.getNewMedium() + " new)" : "";
@@ -62,23 +53,38 @@ public abstract class SASTUtils {
         log.info("Low severity results: " + sastResults.getLow() + lowNew);
         log.info("Information severity results: " + sastResults.getInformation() + infoNew);
         log.info("");
-       /* if (enableViolations && !sastResults.getSastPolicies().isEmpty()) {
-            log.info("SAST violated policies names: " + StringUtils.join(sastResults.getSastPolicies(), ','));
-        }*/
         log.info("Scan results location: " + sastResults.getSastScanLink());
         log.info("------------------------------------------------------------------------------------------\n");
     }
 
     //PDF Report
-    public static String writePDFReport(byte[] scanReport, File workspace, Logger log) {
-        String now = new SimpleDateFormat("dd_MM_yyyy-HH_mm_ss").format(new Date());
-        String pdfFileName = PDF_REPORT_NAME + "_" + now + ".pdf";
+    public static String writePDFReport(byte[] scanReport, File workspace, String pdfFileName, Logger log) {
         try {
             FileUtils.writeByteArrayToFile(new File(workspace + CX_REPORT_LOCATION, pdfFileName), scanReport);
             log.info("PDF report location: " + workspace + CX_REPORT_LOCATION + File.separator + pdfFileName);
         } catch (Exception e) {
             log.error("Failed to write PDF report to workspace: ", e.getMessage());
+            pdfFileName = "";
         }
         return pdfFileName;
+    }
+
+    // CLI Report/s
+    public static void writeReport(byte[] scanReport, String reportName, Logger log) {
+        try {
+            File reportFile = new File(reportName);
+            if (!reportFile.isAbsolute()) {
+                reportFile = new File(System.getProperty("user.dir") + CX_REPORT_LOCATION + File.separator + reportFile);
+            }
+
+            if (!reportFile.getParentFile().exists()) {
+                reportFile.getParentFile().mkdirs();
+            }
+
+            FileUtils.writeByteArrayToFile(reportFile, scanReport);
+            log.info("report location: " + reportFile.getAbsolutePath());
+        } catch (Exception e) {
+            log.error("Failed to write report: ", e.getMessage());
+        }
     }
 }

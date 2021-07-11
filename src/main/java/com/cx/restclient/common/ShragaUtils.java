@@ -1,8 +1,5 @@
 package com.cx.restclient.common;
 
-import com.cx.restclient.configuration.CxScanConfig;
-import com.cx.restclient.osa.dto.OSAResults;
-import com.cx.restclient.sast.dto.SASTResults;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 
@@ -17,65 +14,10 @@ import java.util.Map;
  * Date: 4/12/2018.
  */
 public abstract class ShragaUtils {
-    //Util methods
-    public static boolean isThresholdExceeded(CxScanConfig config, SASTResults sastResults, OSAResults osaResults, StringBuilder res) {
-        boolean thresholdExceeded = false;
-        if (config.isSASTThresholdEffectivelyEnabled() && sastResults != null && sastResults.isSastResultsReady()) {
-            thresholdExceeded = isSeverityExceeded(sastResults.getHigh(), config.getSastHighThreshold(), res, "high", "CxSAST ");
-            thresholdExceeded |= isSeverityExceeded(sastResults.getMedium(), config.getSastMediumThreshold(), res, "medium", "CxSAST ");
-            thresholdExceeded |= isSeverityExceeded(sastResults.getLow(), config.getSastLowThreshold(), res, "low", "CxSAST ");
-        }
-        if (config.isOSAThresholdEffectivelyEnabled() && osaResults != null && osaResults.isOsaResultsReady()) {
-            thresholdExceeded |= isSeverityExceeded(osaResults.getResults().getTotalHighVulnerabilities(), config.getOsaHighThreshold(), res, "high", "CxOSA  ");
-            thresholdExceeded |= isSeverityExceeded(osaResults.getResults().getTotalMediumVulnerabilities(), config.getOsaMediumThreshold(), res, "medium", "CxOSA  ");
-            thresholdExceeded |= isSeverityExceeded(osaResults.getResults().getTotalLowVulnerabilities(), config.getOsaLowThreshold(), res, "low", "CxOSA  ");
-        }
-        return thresholdExceeded;
-    }
-
-    public static boolean isThresholdForNewResultExceeded(CxScanConfig config, SASTResults sastResults, StringBuilder res) {
-        boolean exceeded = false;
-
-        if (sastResults != null && sastResults.isSastResultsReady() && config.getSastNewResultsThresholdEnabled()) {
-            String severity = config.getSastNewResultsThresholdSeverity();
-
-            if ("LOW".equals(severity)) {
-                if (sastResults.getNewLow() > 0) {
-                    res.append("One or more new results of low severity\n");
-                    exceeded = true;
-                }
-                severity = "MEDIUM";
-            }
-
-            if ("MEDIUM".equals(severity)) {
-                if (sastResults.getNewMedium() > 0) {
-                    res.append("One or more new results of medium severity\n");
-                    exceeded = true;
-                }
-                severity = "HIGH";
-            }
-
-            if ("HIGH".equals(severity)) {
-                if (sastResults.getNewHigh() > 0) {
-                    res.append("One or more New results of high severity\n");
-                    exceeded = true;
-                }
-            }
-        }
-
-        return exceeded;
-    }
-
-    private static boolean isSeverityExceeded(int result, Integer threshold, StringBuilder res, String severity, String severityType) {
-        boolean fail = false;
-        if (threshold != null && result > threshold) {
-            res.append(severityType).append(severity).append(" severity results are above threshold. Results: ").append(result).append(". Threshold: ").append(threshold).append("\n");
-            fail = true;
-        }
-        return fail;
-    }
-
     public static Map<String, List<String>> generateIncludesExcludesPatternLists(String folderExclusions, String filterPattern, Logger log) {
+
+        folderExclusions = removeSpaceAndNewLine(folderExclusions);
+        filterPattern = removeSpaceAndNewLine(filterPattern);
 
         String excludeFoldersPattern = processExcludeFolders(folderExclusions, log);
         String combinedPatterns = "";
@@ -91,6 +33,13 @@ public abstract class ShragaUtils {
         }
 
         return convertPatternsToLists(combinedPatterns);
+    }
+
+    public static String removeSpaceAndNewLine(String string){
+        if(string!=null){
+            string = string.replace("\\s","").replace("\n", "").replace("\r", "").replace(" ","").replace("\t","");
+        }
+        return string;
     }
 
     public static String processExcludeFolders(String folderExclusions, Logger log) {
@@ -112,8 +61,10 @@ public abstract class ShragaUtils {
         log.info("Exclude folders converted to: '" + result.toString() + "'");
         return result.toString();
     }
+
     public static final String INCLUDES_LIST = "includes";
     public static final String EXCLUDES_LIST = "excludes";
+
     public static Map<String, List<String>> convertPatternsToLists(String filterPatterns) {
         filterPatterns = StringUtils.defaultString(filterPatterns);
         List<String> inclusions = new ArrayList<String>();
@@ -122,10 +73,10 @@ public abstract class ShragaUtils {
         for (String filter : filters) {
             if (StringUtils.isNotEmpty(filter)) {
                 if (!filter.startsWith("!")) {
-                    inclusions.add(filter);
+                    inclusions.add(filter.trim());
                 } else if (filter.length() > 1) {
                     filter = filter.substring(1); // Trim the "!"
-                    exclusions.add(filter);
+                    exclusions.add(filter.trim());
                 }
             }
         }
@@ -147,5 +98,16 @@ public abstract class ShragaUtils {
 
         }
         return ret;
+    }
+
+    public static String getTimestampSince(long startTimeSec) {
+        long elapsedSec = System.currentTimeMillis() / 1000 - startTimeSec;
+        long hours = elapsedSec / 3600;
+        long minutes = elapsedSec % 3600 / 60;
+        long seconds = elapsedSec % 60;
+        String hoursStr = (hours < 10) ? ("0" + hours) : (Long.toString(hours));
+        String minutesStr = (minutes < 10) ? ("0" + minutes) : (Long.toString(minutes));
+        String secondsStr = (seconds < 10) ? ("0" + seconds) : (Long.toString(seconds));
+        return String.format("%s:%s:%s", hoursStr, minutesStr, secondsStr);
     }
 }

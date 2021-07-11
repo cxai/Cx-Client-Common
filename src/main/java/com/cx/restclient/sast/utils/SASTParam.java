@@ -11,10 +11,17 @@ public class SASTParam {
     public static final String SAST_CREATE_SCAN = "sast/scans"; //Run a new Scan
     public static final String SAST_SCAN = "sast/scans/{scanId}"; //Get Scan status (by scan ID)
     public static final String SAST_QUEUE_SCAN_STATUS = "sast/scansQueue/{scanId}";
+    public static final String SAST_GET_PROJECT_BY_ID = "projects/{projectId}";
     public static final String SAST_GET_PROJECT = "projects?projectname={name}&teamid={teamId}";// Get  project)
-    public static final String SAST_GET_All_PROJECTS = "projects";// Get  project)
+    public static final String SAST_GET_ALL_PROJECTS = "projects";// Get  project)
     public static final String SAST_ZIP_ATTACHMENTS = "projects/{projectId}/sourceCode/attachments";//Attach ZIP file
     public static final String SAST_GET_PROJECT_SCANS = "sast/scans?projectId={projectId}";
+    public static final String SAST_GET_QUEUED_SCANS = "sast/scansQueue?projectId={projectId}";
+
+
+    public static final String SAST_CREATE_REMOTE_SOURCE_SCAN = "projects/%s/sourceCode/remoteSettings/%s/%s";
+    public static final String SAST_EXCLUDE_FOLDERS_FILES_PATTERNS = "projects/%s/sourceCode/excludeSettings";
+
 
 
     //Once it has results
@@ -22,6 +29,8 @@ public class SASTParam {
     public static final String SAST_CREATE_REPORT = "reports/sastScan/"; //Create new report (get ID)
     public static final String SAST_GET_REPORT_STATUS = "reports/sastScan/{reportId}/status"; //Get report status
     public static final String SAST_GET_REPORT = "reports/sastScan/{reportId}"; //Get report status
+    public static final String SAST_GET_CXARM_STATUS = "sast/projects/{projectId}/publisher/policyFindings/status"; //Get report status
+
 
     //ZIP PARAMS
     public static final long MAX_ZIP_SIZE_BYTES = 2147483648L;

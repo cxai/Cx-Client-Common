@@ -1,30 +1,38 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.checkmarx</groupId>
     <artifactId>cx-client-common</artifactId>
-    <version>8.90.0-SNAPSHOT</version>
+    <version>${cxcommon.version}</version>
     <packaging>jar</packaging>
-
     <name>Checkmarx Client</name>
-    <description>Enables web services access Checkmarx SAST and OSA scan.</description>
+    <description>Web client for interaction with Checkmarx SAST, SCA and OSA products</description>
     <url>https://www.checkmarx.com</url>
     <scm>
-        <connection>scm:git:git://github.com/CxRepositories/Cx-Client-Common.git</connection>
-        <developerConnection>scm:git:ssh://github.com/CxRepositories/Cx-Client-Common.git</developerConnection>
-        <url>https://github.com/CxRepositories/Cx-Client-Common/tree/master</url>
+        <connection>scm:git:git://github.com/checkmarx-ltd/Cx-Client-Common.git</connection>
+        <developerConnection>scm:git:ssh://github.com/checkmarx-ltd/Cx-Client-Common.git</developerConnection>
+        <url>https://github.com/checkmarx-ltd/Cx-Client-Common/tree/master</url>
     </scm>
+    <!-- Trigger-->
     <licenses>
         <license>
             <name>MIT License</name>
             <url>http://www.opensource.org/licenses/mit-license.php</url>
         </license>
     </licenses>
-
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <slf4j.version>1.7.31</slf4j.version>
+        <javax.activation.version>1.2.0</javax.activation.version>
+        <jaxb.api.version>2.3.0</jaxb.api.version>
+        <lombok.version>1.18.6</lombok.version>
+
+        <!--SonarCloud scan -->
+        <sonar.projectKey>checkmarx-ltd_Cx-Client-Common</sonar.projectKey>
+        <sonar.organization>checkmarx-ltd</sonar.organization>
+        <sonar.host.url>https://sonarcloud.io</sonar.host.url>
+        <sonar.projectName>Cx-Client-Common</sonar.projectName>
     </properties>
     <organization>
         <name>Checkmarx</name>
@@ -59,14 +67,52 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.7.0</version>
                 <configuration>
-                    <source>1.7</source>
-                    <target>1.7</target>
+                    <source>1.8</source>
+                    <target>1.8</target>
                 </configuration>
             </plugin>
-        </plugins>
-    </build>
 
+            <!-- Build a fat JAR -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>3.3.0</version>
+                <configuration>
+                    <descriptorRefs>
+                        <descriptorRef>jar-with-dependencies</descriptorRef>
+                    </descriptorRefs>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>make-assembly</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+            </resource>
+        </resources>
+    </build>
     <dependencies>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>${slf4j.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.13.1</version>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>org.freemarker</groupId>
             <artifactId>freemarker</artifactId>
@@ -75,22 +121,52 @@
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpmime</artifactId>
-            <version>4.4.1</version>
+            <version>4.5.4</version>
         </dependency>
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpcore</artifactId>
-            <version>4.4</version>
+            <version>4.4.12</version>
         </dependency>
         <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-            <version>2.8.9</version>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient-win</artifactId>
+            <version>4.5.10</version>
         </dependency>
         <dependency>
-            <groupId>org.whitesource</groupId>
-            <artifactId>whitesource-fs-agent</artifactId>
-            <version>18.7.1</version>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-jdk15on</artifactId>
+            <version>1.68</version>
+        </dependency>
+        <dependency>
+            <artifactId>plexus-utils</artifactId>
+            <groupId>org.codehaus.plexus</groupId>
+            <version>3.2.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.codehaus.plexus</groupId>
+            <artifactId>plexus-archiver</artifactId>
+            <version>4.1.0</version>
+            <exclusions>
+                <exclusion>
+                    <artifactId>commons-compress</artifactId>
+                    <groupId>org.apache.commons</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>plexus-utils</artifactId>
+                    <groupId>org.codehaus.plexus</groupId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>27.0-jre</version>
+        </dependency>
+        <dependency>
+            <groupId>com.checkmarx</groupId>
+            <artifactId>cx-ws-fs-agent</artifactId>
+            <version>20.0.11</version>
             <exclusions>
                 <exclusion>
                     <groupId>javax.xml.bind</groupId>
@@ -101,19 +177,89 @@
                     <artifactId>logback-classic</artifactId>
                 </exclusion>
                 <exclusion>
-                    <groupId>org.slf4j</groupId>
-                    <artifactId>slf4j-api</artifactId>
+                    <artifactId>bcpg-jdk15on</artifactId>
+                    <groupId>org.bouncycastle</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>plexus-archiver</artifactId>
+                    <groupId>org.codehaus.plexus</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>commons-collections</artifactId>
+                    <groupId>commons-collections</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>guava</artifactId>
+                    <groupId>com.google.guava</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>plexus-utils</artifactId>
+                    <groupId>org.codehaus.plexus</groupId>
+                </exclusion>
+                <!--causing vulnerabilities in the osa scan of the project, excluded and newer dependencies imported instead -->
+                <!-- TODO: remove these excludes once its solved in the fsa-->
+                <exclusion>
+                    <groupId>com.beust</groupId>
+                    <artifactId>jcommander</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.apache.ant</groupId>
+                    <artifactId>ant</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.springframework</groupId>
+                    <artifactId>spring-web</artifactId>
                 </exclusion>
             </exclusions>
         </dependency>
+        <!-- excluded dependencies from fsa -->
         <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-            <version>1.7.5</version>
+            <groupId>com.beust</groupId>
+            <artifactId>jcommander</artifactId>
+            <version>1.78</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.ant</groupId>
+            <artifactId>ant</artifactId>
+            <version>1.10.9</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-web</artifactId>
+            <version>5.3.5</version>
+        </dependency>
+        <!-- end of excluded dependencies -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>${lombok.version}</version>
             <scope>provided</scope>
         </dependency>
-    </dependencies>
+        <dependency>
+            <groupId>org.awaitility</groupId>
+            <artifactId>awaitility</artifactId>
+            <version>4.0.2</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <version>3.10</version>
+        </dependency>
 
+        <!-- API -->
+        <dependency>
+            <groupId>jakarta.xml.bind</groupId>
+            <artifactId>jakarta.xml.bind-api</artifactId>
+            <version>2.3.2</version>
+        </dependency>
+
+        <!-- Runtime -->
+        <dependency>
+            <groupId>org.glassfish.jaxb</groupId>
+            <artifactId>jaxb-runtime</artifactId>
+            <version>2.3.2</version>
+        </dependency>
+    </dependencies>
     <distributionManagement>
         <snapshotRepository>
             <id>ossrh</id>
@@ -124,7 +270,6 @@
             <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
         </repository>
     </distributionManagement>
-
     <reporting>
         <plugins>
             <plugin>
@@ -134,7 +279,6 @@
             </plugin>
         </plugins>
     </reporting>
-
     <profiles>
         <profile>
             <id>release</id>
@@ -175,6 +319,7 @@
                             <serverId>ossrh</serverId>
                             <nexusUrl>https://oss.sonatype.org/</nexusUrl>
                             <autoReleaseAfterClose>true</autoReleaseAfterClose>
+                            <stagingProgressTimeoutMinutes>10</stagingProgressTimeoutMinutes>
                         </configuration>
                     </plugin>
                     <plugin>
@@ -182,8 +327,7 @@
                         <artifactId>maven-gpg-plugin</artifactId>
                         <version>1.5</version>
                         <configuration>
-                            <executable>C:\Program Files (x86)\GNU\GnuPG\gpg2.exe</executable>
-                            <passphrase>Checkmarx123456</passphrase>
+                            <executable>/usr/bin/gpg</executable>
                         </configuration>
                         <executions>
                             <execution>
@@ -199,71 +343,12 @@
             </build>
         </profile>
     </profiles>
-
     <developers>
         <developer>
-            <name>Gal Or Nussbaum</name>
-            <email>gal.nussbaum@checkmarx.com</email>
-            <organization>Checkmarx</organization>
+            <name>Alexey Kononov</name>
+            <email>alexey.kononov@checkmarx.com</email>
+            <organization>Checkmarx Ltd</organization>
             <organizationUrl>https://www.checkmarx.com/</organizationUrl>
-            <roles>
-                <role>Architect</role>
-                <role>Developer</role>
-            </roles>
-            <properties>
-                <picUrl>https://www.linkedin.com/in/gal-nussbaum-68b3a76a/de</picUrl>
-            </properties>
-        </developer>
-        <developer>
-            <name>Dor Golan</name>
-            <email>dor.golan@checkmarx.com</email>
-            <organization>Checkmarx</organization>
-            <organizationUrl>https://www.checkmarx.com/</organizationUrl>
-            <roles>
-                <role>Architect</role>
-                <role>Developer</role>
-            </roles>
-            <properties>
-                <picUrl>http://i.imgur.com/44Iil53.png</picUrl>
-            </properties>
-        </developer>
-        <developer>
-        <name>Shaul Valero</name>
-        <email>shaul.valero@checkmarx.com</email>
-        <organization>Checkmarx</organization>
-        <organizationUrl>https://www.checkmarx.com/</organizationUrl>
-        <roles>
-            <role>Dev TL</role>
-            <role>Developer</role>
-        </roles>
-        <properties>
-            <picUrl>http://i.imgur.com/44Iil53.png</picUrl>
-        </properties>
-    </developer>
-        <developer>
-            <name>Eyal Amor</name>
-            <email>eyal.amor@checkmarx.com</email>
-            <organization>Checkmarx</organization>
-            <organizationUrl>https://www.checkmarx.com/</organizationUrl>
-            <roles>
-                <role>Architect</role>
-                <role>Developer</role>
-            </roles>
-            <properties>
-                <picUrl>http://i.imgur.com/44Iil53.png</picUrl>
-            </properties>
-        </developer>
-        <developer>
-            <name>Yair David</name>
-            <email>Yair.David@checkmarx.com</email>
-            <organization>Checkmarx</organization>
-            <organizationUrl>https://www.checkmarx.com/</organizationUrl>
-            <roles>
-                <role>QA Manager</role>
-            </roles>
-            <properties>
-                <picUrl>http://i.imgur.com/EVIS8LO.jpg</picUrl>
-            </properties>
         </developer>
     </developers>
 </project>

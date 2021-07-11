@@ -11,10 +11,7 @@ import org.slf4j.Logger;
 import java.io.File;
 import java.nio.charset.Charset;
 import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
+import java.util.*;
 
 import static com.cx.restclient.common.CxPARAM.CX_REPORT_LOCATION;
 
@@ -24,11 +21,10 @@ import static com.cx.restclient.common.CxPARAM.CX_REPORT_LOCATION;
 public abstract class OSAUtils {
 
     private static final String[] SUPPORTED_EXTENSIONS = {"jar", "war", "ear", "aar", "dll", "exe", "msi", "nupkg", "egg", "whl", "tar.gz", "gem", "deb", "udeb",
-            "dmg", "drpm", "rpm", "pkg.tar.xz", "swf", "swc", "air", "apk", "zip", "gzip", "tar.bz2", "tgz", "c", "cc", "cp", "cpp", "css", "c++", "h", "hh", "hpp",
-            "hxx", "h++", "m", "mm", "pch", "java", "c#", "cs", "csharp", "go", "goc", "js", "plx", "pm", "ph", "cgi", "fcgi", "psgi", "al", "perl", "t", "p6m", "p6l", "nqp,6pl", "6pm",
-            "p6", "php", "py", "rb", "swift", "clj", "cljx", "cljs", "cljc"};
+            "dmg", "drpm", "rpm", "pkg.tar.xz", "swf", "swc", "air", "apk", "zip", "gzip", "tar.bz2", "tgz", "js"};
 
     private static final String INCLUDE_ALL_EXTENSIONS = "**/**";
+    private static final String JSON_EXTENSION = ".json";
 
     public static final String DEFAULT_ARCHIVE_INCLUDES = "**/.*jar,**/*.war,**/*.ear,**/*.sca,**/*.gem,**/*.whl,**/*.egg,**/*.tar,**/*.tar.gz,**/*.tgz,**/*.zip,**/*.rar";
 
@@ -48,7 +44,7 @@ public abstract class OSAUtils {
         return String.format(url + "/CxWebClient/SPA/#/viewer/project/%s", projectId);
     }
 
-    public static Properties generateOSAScanConfiguration(String folderExclusions, String filterPatterns, String archiveIncludes, String scanFolder, boolean installBeforeScan, Logger log) {
+    public static Properties generateOSAScanConfiguration(String folderExclusions, String filterPatterns, String archiveIncludes, String sourceDir, boolean installBeforeScan, String osaScanDepth, Logger log) {
         Properties ret = new Properties();
         filterPatterns = StringUtils.defaultString(filterPatterns);
         archiveIncludes = StringUtils.defaultString(archiveIncludes);
@@ -86,22 +82,58 @@ public abstract class OSAUtils {
             ret.put("archiveIncludes", DEFAULT_ARCHIVE_INCLUDES);
         }
 
-        ret.put("archiveExtractionDepth", "4");
+        ret.put("archiveExtractionDepth", StringUtils.isNotEmpty(osaScanDepth) ? osaScanDepth : "4");
+
+        ret.put("npm.ignoreNpmLsErrors", "true");
 
         if (installBeforeScan) {
             ret.put("npm.runPreStep", "true");
             ret.put("bower.runPreStep", "false");
             ret.put("npm.ignoreScripts", "true");
-
-            ret.put("nuget.resolveDependencies", "true");
-            ret.put("nuget.restoreDependencies", "true");
-            ret.put("python.resolveDependencies", "true");
-            ret.put("python.ignorePipInstallErrors", "true");
+            ret.put("php.runPreStep", "true");
+            ret.put("sbt.runPreStep", "true");
+            setResolveDependencies(ret, "true");
+            ret.put("sbt.targetFolder", getSbtTargetFolder(sourceDir));
+        } else {
+            setResolveDependencies(ret, "false");
         }
 
-        ret.put("d", scanFolder);
-
+        ret.put("d", sourceDir);
         return ret;
+    }
+
+    private static void setResolveDependencies(Properties ret, String resolveDependencies) {
+        ret.put("gradle.runAssembleCommand", resolveDependencies);
+        ret.put("nuget.resolveDependencies", resolveDependencies);
+        ret.put("nuget.restoreDependencies", resolveDependencies);
+        ret.put("python.resolveDependencies", resolveDependencies);
+        ret.put("python.ignorePipInstallErrors", resolveDependencies);
+        ret.put("php.resolveDependencies", resolveDependencies);
+        ret.put("sbt.resolveDependencies", resolveDependencies);
+    }
+
+    private static String getSbtTargetFolder(String sourceFolder) {
+        List<File> files = new ArrayList<File>();
+        files = getBuildSbtFiles(sourceFolder, files);
+        if (!files.isEmpty()) {
+            return files.get(0).getAbsolutePath().replace("build.sbt", "target");
+        }
+        return "target";
+    }
+
+    private static List<File> getBuildSbtFiles(String path, List<File> inputFiles) {
+        File folder = new File(path);
+        List<File> files = Arrays.asList(folder.listFiles());
+        for (File file : files) {
+            if (file.isFile()) {
+                if (file.getName().endsWith("build.sbt")) {
+                    inputFiles.add(file);
+                }
+            } else if (file.isDirectory()) {
+                inputFiles = getBuildSbtFiles(file.getAbsolutePath(), inputFiles);
+            }
+        }
+        return inputFiles;
     }
 
     public static void printOSAResultsToConsole(OSAResults osaResults, boolean enableViolations, Logger log) {
@@ -124,29 +156,59 @@ public abstract class OSAUtils {
         log.info("Vulnerable and updated: " + osaSummaryResults.getVulnerableAndUpdated());
         log.info("Non-vulnerable libraries: " + osaSummaryResults.getNonVulnerableLibraries());
         log.info("");
-        if (enableViolations) {
-            if (osaResults.getOsaPolicies().isEmpty()){
-                log.info("Project policy status: compliant");
-            }else{
-                log.info("Project policy status: violated");
-                log.info("OSA violated policies names: " +  StringUtils.join(osaResults.getOsaPolicies(), ','));
-            }
-        }
         log.info("OSA scan results location: " + osaResults.getOsaProjectSummaryLink());
         log.info("-----------------------------------------------------------------------------------------");
     }
 
-    public static void writeJsonToFile(String name, Object jsonObj, File workDirectory, Logger log) {
+    public static File getWorkDirectory(File filePath, Boolean osaGenerateJsonReport) {
+        if (filePath == null) {
+            return null;
+        }
+
+        if (!osaGenerateJsonReport) {
+            return filePath;
+        }
+
+        File workDirectory;
+        if (!filePath.isAbsolute()) {
+            workDirectory = new File(System.getProperty("user.dir") + CX_REPORT_LOCATION);
+        } else {
+            workDirectory = filePath.getParentFile();
+        }
+        if (!workDirectory.exists()) {
+            workDirectory.mkdirs();
+        }
+
+        return workDirectory;
+    }
+
+    public static void writeJsonToFile(String name, Object jsonObj, File workDirectory, Boolean cliOsaGenerateJsonReport, Logger log) {
         try {
             ObjectMapper objectMapper = new ObjectMapper();
-            String now = new SimpleDateFormat("dd_MM_yyyy-HH_mm_ss").format(new Date());
-            String fileName = name + "_" + now + ".json";
-            File jsonFile = new File(workDirectory + CX_REPORT_LOCATION, fileName);
             String json = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(jsonObj);
-            FileUtils.writeStringToFile(jsonFile, json);
-            log.info(name + " json location: " + workDirectory + CX_REPORT_LOCATION + File.separator + fileName);
+
+            if (cliOsaGenerateJsonReport) {
+                //workDirectory = new File(workDirectory.getPath().replace(".json", "_" + name + ".json"));
+                if (!workDirectory.isAbsolute()) {
+                    workDirectory = new File(System.getProperty("user.dir") + CX_REPORT_LOCATION + File.separator + workDirectory);
+                }
+                if (!workDirectory.getParentFile().exists()) {
+                    workDirectory.getParentFile().mkdirs();
+                }
+                name = name.endsWith(JSON_EXTENSION) ? name : name + JSON_EXTENSION;
+                File jsonFile = new File(workDirectory + File.separator + name);
+                FileUtils.writeStringToFile(jsonFile, json);
+                log.info(name + " saved under location: " + jsonFile);
+            } else {
+                String now = new SimpleDateFormat("dd_MM_yyyy-HH_mm_ss").format(new Date());
+                String fileName = name + "_" + now + JSON_EXTENSION;
+                File jsonFile = new File(workDirectory + CX_REPORT_LOCATION, fileName);
+                FileUtils.writeStringToFile(jsonFile, json);
+                log.info(name + " saved under location: " + workDirectory + CX_REPORT_LOCATION + File.separator + fileName);
+            }
         } catch (Exception ex) {
             log.warn("Failed to write OSA JSON report (" + name + ") to file: " + ex.getMessage());
         }
     }
+
 }
