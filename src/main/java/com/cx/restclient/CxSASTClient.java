@@ -6,6 +6,7 @@ import com.cx.restclient.common.Waiter;
 import com.cx.restclient.configuration.CxScanConfig;
 import com.cx.restclient.dto.*;
 import com.cx.restclient.exception.CxClientException;
+import com.cx.restclient.exception.CxHTTPClientException;
 import com.cx.restclient.sast.dto.*;
 import com.cx.restclient.sast.utils.LegacyClient;
 import com.cx.restclient.sast.utils.SASTUtils;
@@ -58,6 +59,9 @@ public class CxSASTClient extends LegacyClient implements Scanner {
     private static final String SWAGGER_LOCATION = "help/swagger/docs/v1.1";
     private static final String ZIPPED_SOURCE = "zippedSource";
     private static final String SAST_SCAN= "SAST scan status";
+    
+    private String language = "en-US";
+    
     private Waiter<ReportStatus> reportWaiter = new Waiter<ReportStatus>("Scan report", 10, 3) {
         @Override
         public ReportStatus getStatus(String id) throws IOException {
@@ -174,7 +178,7 @@ public class CxSASTClient extends LegacyClient implements Scanner {
                 ResponseQueueScanStatus statusResponse = null;
                 try {
                     statusResponse = getSASTScanStatus(id);
-                } catch (MalformedURLException e) {
+                } catch (CxHTTPClientException e) {
                     try {
                         ResponseSastScanStatus statusResponseTemp = getSASTScanOutOfQueueStatus(id);
                         statusResponse = statusResponseTemp.convertResponseSastScanStatusToResponseQueueScanStatus(statusResponseTemp);
@@ -202,6 +206,8 @@ public class CxSASTClient extends LegacyClient implements Scanner {
         SASTResults initSastResults = new SASTResults();
         try {
             initiate();
+            language = httpClient.getLanguageFromAccessToken();
+            initSastResults.setSastLanguage(language);
         } catch (CxClientException e) {
             log.error(e.getMessage());
             setState(State.FAILED);
@@ -224,6 +230,7 @@ public class CxSASTClient extends LegacyClient implements Scanner {
             } else {
                 scanId = createRemoteSourceScan(projectId);
             }
+            sastResults.setSastLanguage(language);
             sastResults.setScanId(scanId);
             log.info("SAST scan created successfully: Scan ID is " + scanId);
             sastResults.setSastScanLink(config.getUrl(), scanId, projectId);
@@ -416,6 +423,7 @@ public class CxSASTClient extends LegacyClient implements Scanner {
     @Override
     public SASTResults getLatestScanResults() {
         sastResults = new SASTResults();
+        sastResults.setSastLanguage(language);
         try {
             log.info("---------------------------------Get Last CxSAST Results:--------------------------------");
             List<LastScanResponse> scanList = getLatestSASTStatus(projectId);
@@ -566,7 +574,7 @@ public class CxSASTClient extends LegacyClient implements Scanner {
 
     //Check SAST scan status via sast/scans/{scanId} API
     public ResponseSastScanStatus getSASTScanOutOfQueueStatus(String scanId) throws IOException {
-        ResponseSastScanStatus scanStatus = httpClient.getRequest(SAST_SCAN.replace(SCAN_ID_PATH_PARAM, scanId), CONTENT_TYPE_APPLICATION_JSON_V1, ResponseSastScanStatus.class, 200, SAST_SCAN, false);
+        ResponseSastScanStatus scanStatus = httpClient.getRequest(SAST_SCAN_STATUS.replace(SCAN_ID_PATH_PARAM, scanId), CONTENT_TYPE_APPLICATION_JSON_V1, ResponseSastScanStatus.class, 200, SAST_SCAN, false);
         String currentStatus = scanStatus.getStatus().getName();
 
         if (CurrentStatus.FAILED.value().equals(currentStatus) || CurrentStatus.CANCELED.value().equals(currentStatus) ||
@@ -605,6 +613,7 @@ public class CxSASTClient extends LegacyClient implements Scanner {
     @Override
     public Results initiateScan() {
         sastResults = new SASTResults();
+        sastResults.setSastLanguage(language);
         createSASTScan(projectId);
         return sastResults;
     }
