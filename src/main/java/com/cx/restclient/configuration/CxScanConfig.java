@@ -38,6 +38,7 @@ public class CxScanConfig implements Serializable {
     private String teamId;
     private Boolean denyProject = false;
     private Boolean hideResults = false;
+    private Boolean continueBuild = false;
     private Boolean isPublic = true;
     private Boolean forceScan = false;
     private String presetName;
@@ -115,6 +116,10 @@ public class CxScanConfig implements Serializable {
     private Boolean isProxy = true;
     private ProxyConfig proxyConfig;
     private Boolean useNTLM = false;
+
+    private Integer postScanActionId;
+
+    private String customFields;
 
 
     public CxScanConfig() {
@@ -213,7 +218,15 @@ public class CxScanConfig implements Serializable {
         this.sourceDir = sourceDir;
     }
 
-    public String getOsaLocationPath() {
+    public String getCustomFields() {
+		return customFields;
+	}
+
+	public void setCustomFields(String customFields) {
+		this.customFields = customFields;
+	}
+
+	public String getOsaLocationPath() {
         return osaLocationPath;
     }
 
@@ -598,6 +611,14 @@ public class CxScanConfig implements Serializable {
         this.hideResults = hideResults;
     }
 
+    public Boolean getContinueBuild() {
+        return continueBuild;
+    }
+
+    public void setContinueBuild(Boolean continueBuild) {
+        this.continueBuild = continueBuild;
+    }
+    
 
     public Boolean isAvoidDuplicateProjectScans() {
         return avoidDuplicateProjectScans;
@@ -843,4 +864,13 @@ public class CxScanConfig implements Serializable {
     public void setNTLM(Boolean ntlm) {
         useNTLM = ntlm;
     }
+
+	public Integer getPostScanActionId() {
+		return postScanActionId;
+	}
+
+	public void setPostScanActionId(Integer postScanActionId) {
+		this.postScanActionId = postScanActionId;
+	}
+    
 }

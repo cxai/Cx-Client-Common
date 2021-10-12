@@ -53,6 +53,7 @@ import org.apache.http.protocol.HttpContext;
 import org.apache.http.ssl.SSLContextBuilder;
 import org.apache.http.ssl.SSLContexts;
 import org.apache.http.ssl.TrustStrategy;
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 
@@ -730,7 +731,7 @@ public class CxHttpClient implements Closeable {
      * which will use to identify which language is used in SAST
      * 
      * */ 
-    public String getLanguageFromAccessToken() throws CxHTTPClientException{
+    public String getLanguageFromAccessToken(){
 		String languageForSAST = "en-US";
 		try {
 			
@@ -746,8 +747,9 @@ public class CxHttpClient implements Closeable {
 			log.info("Locale used in CxSAST is  "+languageForSAST);
 			
 			}
-		} catch (CxHTTPClientException ex) {
-			
+		} catch (Exception ex) {
+			// In case the SAST used will not have token, set to default English language
+			languageForSAST = "en-US";
 		}
 		return languageForSAST;
     }
