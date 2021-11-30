@@ -61,7 +61,11 @@ public class AstWaiter {
 
     private static Duration getTimeout(CxScanConfig config) {
         Integer rawTimeout = config.getOsaScanTimeoutInMinutes();
-        final int DEFAULT_TIMEOUT = 30;
+        // For SCA scan get SCA scan time out as the timeout
+        if(config.isAstScaEnabled()) {
+        	rawTimeout = config.getSCAScanTimeoutInMinutes();
+        }
+        final int DEFAULT_TIMEOUT = 60;
         rawTimeout = rawTimeout != null && rawTimeout > 0 ? rawTimeout : DEFAULT_TIMEOUT;
         return Duration.ofMinutes(rawTimeout);
     }
