@@ -654,13 +654,13 @@ public class CxHttpClient implements Closeable {
             //extract response as object and return the link
             return convertToObject(response, responseType, isCollection);
         } catch (UnknownHostException e) {
-        	log.error(e.getMessage());
-            throw new CxHTTPClientException(ErrorMessage.CHECKMARX_SERVER_CONNECTION_FAILED.getErrorMessage(), e);
+            throw new CxHTTPClientException(ErrorMessage.CHECKMARX_SERVER_CONNECTION_FAILED.getErrorMessage());
         } catch (CxTokenExpiredException ex) {
             if (retry) {
                 logTokenError(httpMethod, statusCode, ex);
                 if (lastLoginSettings != null) {
                     login(lastLoginSettings);
+                    removeHeaders(httpMethod);
                     return request(httpMethod, contentType, entity, responseType, expectStatus, failedMsg, isCollection, false);
                 }
             }
@@ -669,6 +669,13 @@ public class CxHttpClient implements Closeable {
             httpMethod.releaseConnection();
             HttpClientUtils.closeQuietly(response);
         }
+    }
+
+    private void removeHeaders(HttpRequestBase httpMethod){
+        httpMethod.removeHeaders("Content-type");
+        httpMethod.removeHeaders(ORIGIN_HEADER);
+        httpMethod.removeHeaders(TEAM_PATH);
+        httpMethod.removeHeaders(HttpHeaders.AUTHORIZATION);
     }
 
     public void close() {

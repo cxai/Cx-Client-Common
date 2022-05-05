@@ -78,6 +78,7 @@ public class CxScanConfig implements Serializable {
     private Boolean osaGenerateJsonReport = true;
     private Boolean osaRunInstall = false;
     private Boolean osaThresholdsEnabled = false;
+    private Boolean osaFailOnError = false;
     private Integer osaHighThreshold;
     private Integer osaMediumThreshold;
     private Integer osaLowThreshold;
@@ -535,6 +536,14 @@ public class CxScanConfig implements Serializable {
 
     public void setOsaThresholdsEnabled(Boolean osaThresholdsEnabled) {
         this.osaThresholdsEnabled = osaThresholdsEnabled;
+    }
+
+    public Boolean isOsaFailOnError() {
+        return osaFailOnError;
+    }
+
+    public void setOsaFailOnError(Boolean osaFailOnError) {
+        this.osaFailOnError = osaFailOnError;
     }
 
     public Integer getOsaHighThreshold() {
