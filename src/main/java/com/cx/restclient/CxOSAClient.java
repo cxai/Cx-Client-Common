@@ -111,10 +111,10 @@ public class CxOSAClient extends LegacyClient implements Scanner {
         }
         if ((!validateOsaDependencies(osaDependenciesJson) && dependenciesErrorsExist()) ||
                 (config.isOsaFailOnError() && dependenciesErrorsExist())) {
-            log.error("Fail to resolve dependencies: ", osaDependenciesJson);
+            log.error("Fail to resolve dependencies: {}", osaDependenciesJson);
             List<String> failedCommands = CommandLineErrors.getFailedCommands();
             for (String fc : failedCommands) {
-                log.error("Failed command: ", fc);
+                log.error("Failed command: {}", fc);
             }
             setState(State.FAILED);
             osaResults.setException(new CxOSAException("Failed to resolve dependencies for OSA scan: \n" + osaDependenciesJson));
@@ -146,11 +146,7 @@ public class CxOSAClient extends LegacyClient implements Scanner {
     }
 
     private boolean validateOsaDependencies(String osaDependenciesJson) {
-        if (StringUtils.isNotEmpty(osaDependenciesJson) &&
-                !osaDependenciesJson.equalsIgnoreCase("[{\"dependencies\":[],\"projectToken\":\" \"}]")) {
-            return true;
-        }
-        return false;
+        return StringUtils.isNotEmpty(osaDependenciesJson) && !osaDependenciesJson.equalsIgnoreCase("[{\"dependencies\":[],\"projectToken\":\" \"}]");
     }
 
     public void setOsaFSAProperties(Properties fsaConfig) {  //For CxMaven plugin
