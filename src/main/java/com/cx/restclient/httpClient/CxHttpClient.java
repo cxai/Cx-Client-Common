@@ -654,7 +654,8 @@ public class CxHttpClient implements Closeable {
             //extract response as object and return the link
             return convertToObject(response, responseType, isCollection);
         } catch (UnknownHostException e) {
-            throw new CxHTTPClientException(ErrorMessage.CHECKMARX_SERVER_CONNECTION_FAILED.getErrorMessage());
+            log.error(e.getMessage());
+            throw new CxHTTPClientException(ErrorMessage.CHECKMARX_SERVER_CONNECTION_FAILED.getErrorMessage(), e);
         } catch (CxTokenExpiredException ex) {
             if (retry) {
                 logTokenError(httpMethod, statusCode, ex);
@@ -671,9 +672,10 @@ public class CxHttpClient implements Closeable {
         }
     }
 
-    private void removeHeaders(HttpRequestBase httpMethod){
+    private void removeHeaders(HttpRequestBase httpMethod) {
         httpMethod.removeHeaders("Content-type");
         httpMethod.removeHeaders(ORIGIN_HEADER);
+        httpMethod.removeHeaders(ORIGIN_URL_HEADER);
         httpMethod.removeHeaders(TEAM_PATH);
         httpMethod.removeHeaders(HttpHeaders.AUTHORIZATION);
     }
@@ -734,33 +736,33 @@ public class CxHttpClient implements Closeable {
 
         log.info("Possible reason: access token has expired. Trying to request a new token...");
     }
-    
-    /* 
-     * This will return string from encoded access token 
+
+    /*
+     * This will return string from encoded access token
      * which will use to identify which language is used in SAST
-     * 
-     * */ 
-    public String getLanguageFromAccessToken(){
-		String languageForSAST = "en-US";
-		try {
-			
-			String actToken = token.getAccess_token();
-			String[] split_string = actToken.split("\\.");
-			if(split_string != null && split_string.length>0){
-			String base64EncodedBody = split_string[1];
-			Base64 base64Url = new Base64(true);
-			String body = new String(base64Url.decode(base64EncodedBody));
-			String tokenToParse = body.replace("\"", "'");
-			JSONObject json = new JSONObject(tokenToParse);
-			languageForSAST = json.getString("locale");
-			log.info("Locale used in CxSAST is  "+languageForSAST);
-			
-			}
-		} catch (Exception ex) {
-			// In case the SAST used will not have token, set to default English language
-			languageForSAST = "en-US";
-		}
-		return languageForSAST;
+     *
+     * */
+    public String getLanguageFromAccessToken() {
+        String languageForSAST = "en-US";
+        try {
+
+            String actToken = token.getAccess_token();
+            String[] split_string = actToken.split("\\.");
+            if (split_string != null && split_string.length > 0) {
+                String base64EncodedBody = split_string[1];
+                Base64 base64Url = new Base64(true);
+                String body = new String(base64Url.decode(base64EncodedBody));
+                String tokenToParse = body.replace("\"", "'");
+                JSONObject json = new JSONObject(tokenToParse);
+                languageForSAST = json.getString("locale");
+                log.info("Locale used in CxSAST is  " + languageForSAST);
+
+            }
+        } catch (Exception ex) {
+            // In case the SAST used will not have token, set to default English language
+            languageForSAST = "en-US";
+        }
+        return languageForSAST;
     }
 
 }
