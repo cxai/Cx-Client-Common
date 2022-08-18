@@ -107,6 +107,7 @@ public class CxSASTClient extends LegacyClient implements Scanner {
     private static final String SWAGGER_LOCATION = "help/swagger/docs/v1.1";
     private static final String ZIPPED_SOURCE = "zippedSource";
     private static final String SAST_SCAN= "SAST scan status";
+    private static final String MSG_AVOID_DUPLICATE_PROJECT_SCANS= "\nAvoid duplicate project scans in queue\n";
     
     private String language = "en-US";
     
@@ -273,7 +274,7 @@ public class CxSASTClient extends LegacyClient implements Scanner {
             log.info("-----------------------------------Create CxSAST Scan:------------------------------------");
             if (config.isAvoidDuplicateProjectScans() != null && config.isAvoidDuplicateProjectScans() && projectHasQueuedScans(projectId)) {
             	dupScanFound = true;
-                throw new CxClientException("\nAvoid duplicate project scans in queue\n");
+                throw new CxClientException(MSG_AVOID_DUPLICATE_PROJECT_SCANS);
             }
             if (config.getRemoteType() == null) { //scan is local
                 scanId = createLocalSASTScan(projectId);
@@ -282,11 +283,12 @@ public class CxSASTClient extends LegacyClient implements Scanner {
             }
             sastResults.setSastLanguage(language);
             sastResults.setScanId(scanId);
-            log.info("SAST scan created successfully: Scan ID is " + scanId);
+            log.info("SAST scan created successfully: Scan ID is {}", scanId);
             sastResults.setSastScanLink(config.getUrl(), scanId, projectId);
         } catch (Exception e) {
             log.error(e.getMessage());
             setState(State.FAILED);
+            errorToBeSuppressed(e);
             if(!config.getContinueBuild() && (!dupScanFound)) {
             sastResults.setException(new CxClientException(e));
             }
@@ -392,6 +394,34 @@ public class CxSASTClient extends LegacyClient implements Scanner {
         defineScanSetting(scanSettingRequest);
     }
 
+	private boolean errorToBeSuppressed(Exception error) {
+
+		if (error instanceof ConditionTimeoutException && config.getContinueBuild()) {
+			sastResults = getLatestScanResults();
+			if (super.isIsNewProject() && sastResults.getSastScanLink() == null) {
+				String message = String
+						.format("Continue with timed out option is enabled. The project %s is a new project. "
+								+ "Hence there is no last scan report to be shown.", config.getProjectName());
+				log.info(message);
+				setState(State.SUCCESS);
+				return true;
+			}
+		} else if (error.getMessage().contains("source folder is empty,") || (sastResults.getException() != null && sastResults.getException().getMessage().contains("No files to zip"))) {
+			sastResults.setException(null);
+			setState(State.SUCCESS);
+			return true;
+		} else if (error.getMessage().contains("No files to zip")) { 
+			sastResults = new SASTResults();
+			sastResults.setException(new CxClientException(error));
+			setState(State.SUCCESS);
+		} else if (error.getMessage().equalsIgnoreCase(MSG_AVOID_DUPLICATE_PROJECT_SCANS)) {
+			setState(State.SUCCESS);
+			return true;
+
+		}
+		return false;
+	}
+
    
     //GET SAST results + reports
     @Override
@@ -401,24 +431,19 @@ public class CxSASTClient extends LegacyClient implements Scanner {
             //wait for SAST scan to finish
             log.info("Waiting for CxSAST scan to finish.");
             try {
-            	 
+            	
 				sastWaiter.waitForTaskToFinish(Long.toString(scanId), config.getSastScanTimeoutInMinutes() * 60, log);
 				log.info("Retrieving SAST scan results");
 				//retrieve SAST scan results
 				sastResults = retrieveSASTResults(scanId, projectId);
 			} catch (ConditionTimeoutException e) {
-				if (config.getContinueBuild()) {
-					sastResults = getLatestScanResults();
-					if (super.isIsNewProject() && sastResults.getSastScanLink() == null) {
-						String message = String
-								.format("Continue with timed out option is enabled. The project %s is a new project. "
-										+ "Hence there is no last scan report to be shown.", config.getProjectName());
-						log.info(message);
-					}
-				} else {
+				errorToBeSuppressed(e);
+				if (!config.getContinueBuild()) {
 					// throw the exception so that caught by outer catch
 					throw new Exception(e.getMessage());
 				}
+			} catch (CxClientException | IOException  e) {
+				errorToBeSuppressed(e);
 			}
             if (config.getEnablePolicyViolations()) {
                 resolveSASTViolation(sastResults, projectId);
@@ -455,6 +480,7 @@ public class CxSASTClient extends LegacyClient implements Scanner {
             }
         } catch (Exception e) {
             log.error(e.getMessage());
+            errorToBeSuppressed(e);
             sastResults.setException(new CxClientException(e));
         }
 
