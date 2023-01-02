@@ -21,6 +21,7 @@ import java.nio.file.attribute.FileAttribute;
 import java.sql.Timestamp;
 import java.util.Date;
 import java.text.SimpleDateFormat;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -429,7 +430,11 @@ public class AstScaClient extends AstClient implements Scanner {
 
         String scaResultPathArgName = getScaResultPathArgumentName(scaConfig);
         if(scaResultPathArgName != "") {
-            pathToResultJSONFile = getScaResolverResultFilePathFromAdditionalParams(scaConfig.getScaResolverAddParameters(), scaResultPathArgName);     
+        	try {
+        		pathToResultJSONFile = getScaResolverResultFilePathFromAdditionalParams(scaConfig.getScaResolverAddParameters(), scaResultPathArgName);     
+            } catch (ParseException e) {
+                throw new CxClientException(e.getMessage());
+            }
         }
         
         log.info("SCA resolver result path configured: " + pathToResultJSONFile);
@@ -438,8 +443,12 @@ public class AstScaClient extends AstClient implements Scanner {
         pathToResultJSONFile = createTimestampBasedPath(pathToResultJSONFile, timeStamp, SASTParam.SCA_RESOLVER_RESULT_FILE_NAME);
 
         if (checkSastResultPath(scaConfig)) {
-            pathToSASTResultJSONFile = getScaResolverResultFilePathFromAdditionalParams(scaConfig.getScaResolverAddParameters(), "--sast-result-path");                
-            
+        	try {
+        		pathToSASTResultJSONFile = getScaResolverResultFilePathFromAdditionalParams(scaConfig.getScaResolverAddParameters(), "--sast-result-path");                
+                
+            } catch (ParseException e) {
+                throw new CxClientException(e.getMessage());
+            }
             log.info("SAST result path location configured: " + pathToSASTResultJSONFile);
             pathToSASTResultJSONFile = createTimestampBasedPath(pathToSASTResultJSONFile, timeStamp, SASTParam.SAST_RESOLVER_RESULT_FILE_NAME);
         }
@@ -456,7 +465,7 @@ public class AstScaClient extends AstClient implements Scanner {
             Files.createDirectory(destTempDir.toPath());           
             Files.copy(new File(pathToResultJSONFile).toPath(), new File(tempResultFile).toPath(), StandardCopyOption.COPY_ATTRIBUTES);
             if(!StringUtils.isEmpty(pathToSASTResultJSONFile)) 
-            	FileUtils.copyFile(new File(pathToSASTResultJSONFile), new File(tempSASTResultFile), StandardCopyOption.COPY_ATTRIBUTES);
+            	Files.copy(new File(pathToSASTResultJSONFile).toPath(), new File(tempSASTResultFile).toPath(), StandardCopyOption.COPY_ATTRIBUTES);
             
             log.info("Completed File copy to "+tempDirectory);
             zipFile = zipEvidenceFile(destTempDir);
@@ -526,7 +535,7 @@ public class AstScaClient extends AstClient implements Scanner {
      * @param scaResolverAddParams - SCA resolver additional parameters
      * @return - SCA resolver execution result file path.
      */
-	public String getScaResolverResultFilePathFromAdditionalParams(String scaResolverAddParams,String arg) {
+	public String getScaResolverResultFilePathFromAdditionalParams(String scaResolverAddParams,String arg)throws ParseException {
         String[] argument;
         String resolverResultPath = "";
         argument = scaResolverAddParams.split(" ");
