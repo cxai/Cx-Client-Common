@@ -119,7 +119,6 @@ public class SpawnScaResolver {
             }
             
             log.debug("Executing ScaResolver command.");
-            log.info("Command for Executing ScaResolver: "+command);
             process = Runtime.getRuntime().exec(command);
             
                 try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
