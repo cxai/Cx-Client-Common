@@ -3,9 +3,8 @@ package com.cx.restclient.sca.utils;
 import java.util.*;
 import java.text.ParseException;
 
+import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.text.StringEscapeUtils;
-
 
 public class CxSCAResolverUtils {
 
@@ -79,7 +78,7 @@ public class CxSCAResolverUtils {
                 if ((value.startsWith("\"") && value.endsWith("\"")) || (value.startsWith("'") && value.endsWith("'"))) {
                     value = value.substring(1, value.length() - 1);
                 }
-                value = StringEscapeUtils.unescapeXSI(value);
+                value = StringEscapeUtils.unescapeJava(value);
             }
 
             parsed.put(arg, value);
