@@ -10,6 +10,10 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.io.FileWriter;
 
 import org.apache.commons.lang3.SystemUtils;
 import org.slf4j.Logger;
@@ -20,15 +24,16 @@ import org.slf4j.Logger;
 
 public class SpawnScaResolver {
 
-    public static final String SCA_RESOLVER_EXE = "\\" + "ScaResolver" + ".exe";
-    public static final String SCA_RESOLVER_FOR_LINUX = "/" + "ScaResolver";
-    public static final String OFFLINE = "offline";
+	public static final String SCA_RESOLVER_EXE = "\\" + "ScaResolver" + ".exe";
+	public static final String SCA_RESOLVER_FOR_LINUX = "/" + "ScaResolver";
+	public static final String OFFLINE = "offline";
 
-    /**
+	/**
      * This method executes
      *
      * @param pathToScaResolver    - Path to SCA Resolver executable
      * @param scaResolverAddParams - Additional parameters for SCA resolver
+     * @param pathToSASTResultJSONFile - Additional parameters for SCA resolver
      * @return
      */
     protected static int runScaResolver(String pathToScaResolver, String scaResolverAddParams, String pathToResultJSONFile,String pathToSASTResultJSONFile, Logger log)
@@ -56,48 +61,82 @@ public class SpawnScaResolver {
         log.debug("Starting build CMD command");
         scaResolverCommand[0] = pathToScaResolver;
         scaResolverCommand[1] = OFFLINE;
-
+        boolean configGiven = false;
         for (int i = 0; i < arguments.size(); i++) {
 
             String arg = arguments.get(i);
             scaResolverCommand[i + 2] = arg;
-            	if (arg.equals("-r") || "--resolver-result-path".equals(arg)) {
-                while (pathToResultJSONFile.contains("\""))
-                    pathToResultJSONFile = pathToResultJSONFile.replace("\"", "");
-                scaResolverCommand[i + 3] = pathToResultJSONFile;
-                i++;
-            }
-            
-        else if("--sast-result-path".equals(arg))
-        {
-        	while (pathToSASTResultJSONFile.contains("\""))
-        		pathToSASTResultJSONFile = pathToSASTResultJSONFile.replace("\"", "");
-            scaResolverCommand[i+3] = pathToSASTResultJSONFile;
-            i++;
-        }  
-        }
+			if (arg.equals("-r") || "--resolver-result-path".equals(arg)) {
+				while (pathToResultJSONFile.contains("\""))
+					pathToResultJSONFile = pathToResultJSONFile.replace("\"", "");
+				scaResolverCommand[i + 3] = pathToResultJSONFile;
+				i++;
+			} else if (arg.equals("-c") || arg.equals("--config-path")) {
+				configGiven = true;
+			}
+
+			else if ("--sast-result-path".equals(arg)) {
+				while (pathToSASTResultJSONFile.contains("\""))
+					pathToSASTResultJSONFile = pathToSASTResultJSONFile.replace("\"", "");
+				scaResolverCommand[i + 3] = pathToSASTResultJSONFile;
+				i++;
+			}
+		}
+        
+		if (!configGiven) {
+			if (pathToResultJSONFile.equals("")) {
+				Path parent = Paths.get(pathToResultJSONFile).getParent();
+				if (parent != null) {
+					Path logDir = Paths.get(parent.toString(), "log");
+					Path configPath = Paths.get(parent.toString(), "Configuration.ini");
+
+					try {
+						Files.createDirectories(logDir);
+					} catch (IOException e) {
+						log.error("Could not create log directory: " + e.getMessage(), e.getStackTrace());
+						throw new CxClientException(e);
+					}
+					try (FileWriter config = new FileWriter(configPath.toString())) {
+						config.write("LogsDirectory=" + logDir);
+					} catch (IOException e) {
+						log.error("Could not create configuration file: " + e.getMessage(), e.getStackTrace());
+					}
+
+					log.debug("    --config-path " + configPath);
+					scaResolverCommand[arguments.size()] = "--config-path";
+					scaResolverCommand[arguments.size() + 1] = configPath.toString();
+				}
+			}
+		}
+        	
         log.debug("Finished created CMD command");
         try {
-            log.info("Executing next command: " + Arrays.toString(scaResolverCommand));
             Process process;
-            if (!SystemUtils.IS_OS_UNIX) {
-                log.debug("Executing cmd command on windows. ");
-                process = Runtime.getRuntime().exec(scaResolverCommand);
-     
-            } else {
+            String[] command = scaResolverCommand;
+            if (SystemUtils.IS_OS_UNIX) {
                 String tempPermissionValidation = "ls " + pathToScaResolver + " -ltr";
                 printExecCommandOutput(tempPermissionValidation, log);
-
-                log.debug("Executing ScaResolver command.");
-                process = Runtime.getRuntime().exec(scaResolverCommand);
             }
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));) {
-            	String line = null;
+            
+            log.debug("Executing ScaResolver command.");
+            process = Runtime.getRuntime().exec(command);
+            
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+                    String line = null;
+                    while ((line = reader.readLine()) != null) {
+                        log.info(line);
+                    }
+                } catch (IOException e) {
+                    log.error("Error while reading standard output: " + e.getMessage(), e.getStackTrace());
+                    throw new CxClientException(e);
+            }
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getErrorStream()))) {
+                    String line;
                 while ((line = reader.readLine()) != null) {
                 	log.debug(line);
                 }
             } catch (IOException e) {
-                log.error("Error while trying write to the file: " + e.getMessage(), e.getStackTrace());
+                log.error("Error while reading error output: " + e.getMessage(), e.getStackTrace());
                 throw new CxClientException(e);
             }
             exitCode = process.waitFor();
@@ -110,21 +149,21 @@ public class SpawnScaResolver {
             }
         }
         return exitCode;
+        
     }
 
-    private static void printExecCommandOutput(String execCommand, Logger log) {
-        try {
-            log.debug("Checking that next file has -rwxrwxrwx permissions " + execCommand);
-            Runtime r = Runtime.getRuntime();
-            Process p = r.exec(execCommand);
-            BufferedReader is = new BufferedReader(new InputStreamReader(p.getInputStream()));
-            String line;
-            while ((line = is.readLine()) != null) {
-                log.debug(line);
-            }
-        } catch (Exception ex) {
-            log.debug("Failed to run execute [%s] command ");
-        }
-    }
+	private static void printExecCommandOutput(String execCommand, Logger log) {
+		try {
+			log.debug("Checking that next file has -rwxrwxrwx permissions " + execCommand);
+			Runtime r = Runtime.getRuntime();
+			Process p = r.exec(execCommand);
+			BufferedReader is = new BufferedReader(new InputStreamReader(p.getInputStream()));
+			String line;
+			while ((line = is.readLine()) != null) {
+				log.debug(line);
+			}
+		} catch (Exception ex) {
+			log.debug("Failed to run execute [%s] command ");
+		}
+	}
 }
-

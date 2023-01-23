@@ -21,6 +21,7 @@ import java.nio.file.attribute.FileAttribute;
 import java.sql.Timestamp;
 import java.util.Date;
 import java.text.SimpleDateFormat;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -425,45 +426,74 @@ public class AstScaClient extends AstClient implements Scanner {
     	log.info("Sca Resolver Additional Parameters: {}", scaConfig.getScaResolverAddParameters());
     	File zipFile;
     	String pathToResultJSONFile = "";
-        String pathToSASTResultJSONFile = "";        
+        String pathToSASTResultJSONFile = ""; 
+        String pathToResultJSONFileNew= "";
+        String pathToSASTResultJSONFileNew= "";
 
         String scaResultPathArgName = getScaResultPathArgumentName(scaConfig);
         if(scaResultPathArgName != "") {
-            pathToResultJSONFile = getScaResolverResultFilePathFromAdditionalParams(scaConfig.getScaResolverAddParameters(), scaResultPathArgName);     
+        	try {
+        		pathToResultJSONFile = getScaResolverResultFilePathFromAdditionalParams(scaConfig.getScaResolverAddParameters(), scaResultPathArgName);     
+            } catch (ParseException e) {
+                throw new CxClientException(e.getMessage());
+            }
         }
         
         log.info("SCA resolver result path configured: " + pathToResultJSONFile);
 
         String timeStamp = getTimestampFolder();
-        pathToResultJSONFile = createTimestampBasedPath(pathToResultJSONFile, timeStamp, SASTParam.SCA_RESOLVER_RESULT_FILE_NAME);
-
+        pathToResultJSONFileNew = createTimestampBasedPath(pathToResultJSONFile, timeStamp, SASTParam.SCA_RESOLVER_RESULT_FILE_NAME);
         if (checkSastResultPath(scaConfig)) {
-            pathToSASTResultJSONFile = getScaResolverResultFilePathFromAdditionalParams(scaConfig.getScaResolverAddParameters(), "--sast-result-path");                
-            
+        	try {
+        		pathToSASTResultJSONFile = getScaResolverResultFilePathFromAdditionalParams(scaConfig.getScaResolverAddParameters(), "--sast-result-path");                
+                
+            } catch (ParseException e) {
+                throw new CxClientException(e.getMessage());
+            }
             log.info("SAST result path location configured: " + pathToSASTResultJSONFile);
-            pathToSASTResultJSONFile = createTimestampBasedPath(pathToSASTResultJSONFile, timeStamp, SASTParam.SAST_RESOLVER_RESULT_FILE_NAME);
+            pathToSASTResultJSONFileNew = createTimestampBasedPath(pathToSASTResultJSONFile, timeStamp, SASTParam.SAST_RESOLVER_RESULT_FILE_NAME);
         }
         log.info("Launching dependency resolution by ScaResolver. ScaResolver logs can be viewed in debug level logs of the pipeline."); 
-        int exitCode = SpawnScaResolver.runScaResolver(scaConfig.getPathToScaResolver(), scaConfig.getScaResolverAddParameters(),pathToResultJSONFile,pathToSASTResultJSONFile, log);
+        int exitCode = SpawnScaResolver.runScaResolver(scaConfig.getPathToScaResolver(), scaConfig.getScaResolverAddParameters(),pathToResultJSONFileNew,pathToSASTResultJSONFileNew, log);
         if (exitCode == 0) {
         	log.info("Dependency resolution completed."); 
-        	String parentDir = pathToResultJSONFile.substring(0, pathToResultJSONFile.lastIndexOf(File.separator));   
+        	String parentDir = pathToResultJSONFileNew.substring(0, pathToResultJSONFileNew.lastIndexOf(File.separator)); 
+        	String parentDirSast = pathToSASTResultJSONFileNew.substring(0, pathToSASTResultJSONFileNew.lastIndexOf(File.separator)); 
             String tempDirectory = parentDir +  File.separator + "tmp";
             String tempResultFile =  tempDirectory + File.separator + SASTParam.SCA_RESOLVER_RESULT_FILE_NAME;
             String tempSASTResultFile =  tempDirectory + File.separator + SASTParam.SAST_RESOLVER_RESULT_FILE_NAME;
             log.debug("Copying ScaResolver result files to temporary location.");
             File destTempDir = new File(tempDirectory);
-            Files.createDirectory(destTempDir.toPath());           
-            Files.copy(new File(pathToResultJSONFile).toPath(), new File(tempResultFile).toPath(), StandardCopyOption.COPY_ATTRIBUTES);
-            if(!StringUtils.isEmpty(pathToSASTResultJSONFile)) 
-            	FileUtils.copyFile(new File(pathToSASTResultJSONFile), new File(tempSASTResultFile), StandardCopyOption.COPY_ATTRIBUTES);
+			File destParentDir = new File(parentDir);
+			File destPartentSastDir = new File(parentDirSast);
+			if (!destTempDir.exists()) {
+				Files.createDirectory(destTempDir.toPath());
+			}
+
+			Files.copy(new File(pathToResultJSONFileNew).toPath(), new File(tempResultFile).toPath(),
+					StandardCopyOption.REPLACE_EXISTING);
+            if(!StringUtils.isEmpty(pathToSASTResultJSONFileNew)) 
+            	Files.copy(new File(pathToSASTResultJSONFileNew).toPath(), new File(tempSASTResultFile).toPath(), StandardCopyOption.REPLACE_EXISTING);
             
             log.info("Completed File copy to "+tempDirectory);
             zipFile = zipEvidenceFile(destTempDir);
-            log.info("Deleting temporary uploaded file for scan {}", destTempDir.getAbsolutePath());
-            FileUtils.deleteDirectory(destTempDir);
-            log.info("Deleted temp directory " + destTempDir.getAbsolutePath());
-        }else{
+            
+			if (!pathToResultJSONFileNew.equals(pathToResultJSONFile)) {
+				log.info("Deleting directory of result file {}", destParentDir.getAbsolutePath());
+				FileUtils.deleteDirectory(destParentDir);
+				log.info("Deleted directory of result file " + destParentDir.getAbsolutePath());
+			} else {
+				log.info("Deleting temporary uploaded file for scan {}", destTempDir.getAbsolutePath());
+				FileUtils.deleteDirectory(destTempDir);
+				log.info("Deleted temp directory " + destTempDir.getAbsolutePath());
+			}
+			if (!pathToSASTResultJSONFileNew.equals(pathToSASTResultJSONFile)) {
+				log.info("Deleting directory of result file {}", destPartentSastDir.getAbsolutePath());
+				FileUtils.deleteDirectory(destPartentSastDir);
+				log.info("Deleted directory of result file " + destPartentSastDir.getAbsolutePath());
+			}
+
+		}else{
             throw new CxClientException("Error while running sca resolver executable. Exit code: "+exitCode);
         }
     	return initiateScanForUpload(projectId, FileUtils.readFileToByteArray(zipFile), config.getAstScaConfig());
@@ -475,7 +505,6 @@ public class AstScaClient extends AstClient implements Scanner {
         }
         return false;
 	}
-
 	private String createTimestampBasedPath(String inputResultFilePath, String timeStamp,
 			String targetFileName) {
     	 if(inputResultFilePath.isEmpty()) 
@@ -526,7 +555,7 @@ public class AstScaClient extends AstClient implements Scanner {
      * @param scaResolverAddParams - SCA resolver additional parameters
      * @return - SCA resolver execution result file path.
      */
-	public String getScaResolverResultFilePathFromAdditionalParams(String scaResolverAddParams,String arg) {
+	public String getScaResolverResultFilePathFromAdditionalParams(String scaResolverAddParams,String arg)throws ParseException {
         String[] argument;
         String resolverResultPath = "";
         argument = scaResolverAddParams.split(" ");
