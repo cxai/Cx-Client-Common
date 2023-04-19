@@ -20,6 +20,8 @@ public class CxScanConfig implements Serializable {
     private String cxOriginUrl;
     private CxVersion cxVersion;
 
+    private Integer projectRetentionRate;
+    private boolean enableDataRetention;
     private boolean disableCertificateValidation = false;
     private boolean useSSOLogin = false;
 
@@ -130,6 +132,16 @@ public class CxScanConfig implements Serializable {
     
     private boolean isOverrideProjectSetting = false;
 
+    public boolean isOverrideRetentionRate() {
+        return isOverrideRetentionRate;
+    }
+
+    public void setOverrideRetentionRate(boolean overrideRetentionRate) {
+        isOverrideRetentionRate = overrideRetentionRate;
+    }
+
+    private boolean isOverrideRetentionRate = false;
+
     private Boolean enableSastBranching = false;
     
     private String masterBranchProjName;
@@ -220,6 +232,13 @@ public class CxScanConfig implements Serializable {
 
     public Boolean getAvoidDuplicateProjectScans() {
         return avoidDuplicateProjectScans;
+    }
+    public boolean isEnableDataRetention() {
+        return enableDataRetention;
+    }
+
+    public void setEnableDataRetention(boolean enableDataRetention) {
+        this.enableDataRetention = enableDataRetention;
     }
 
     public String getSourceDir() {
@@ -375,6 +394,13 @@ public class CxScanConfig implements Serializable {
 
     public void setSastFolderExclusions(String sastFolderExclusions) {
         this.sastFolderExclusions = sastFolderExclusions;
+    }
+    public Integer getProjectRetentionRate() {
+        return projectRetentionRate;
+    }
+
+    public void setProjectRetentionRate(Integer projectRetentionRate) {
+        this.projectRetentionRate = projectRetentionRate;
     }
 
     public String getSastFilterPattern() {
