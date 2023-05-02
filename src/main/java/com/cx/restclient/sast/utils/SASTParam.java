@@ -22,7 +22,7 @@ public class SASTParam {
     public static final String SAST_CREATE_REMOTE_SOURCE_SCAN = "projects/%s/sourceCode/remoteSettings/%s/%s";
     public static final String SAST_EXCLUDE_FOLDERS_FILES_PATTERNS = "projects/%s/sourceCode/excludeSettings";
 
-
+    public static final String SAST_RETENTION_RATE ="projects/{id}/dataRetentionSettings";
 
     //Once it has results
     public static final String SAST_SCAN_RESULTS_STATISTICS = "sast/scans/{scanId}/resultsStatistics";
@@ -32,7 +32,7 @@ public class SASTParam {
     public static final String SAST_GET_CXARM_STATUS = "sast/projects/{projectId}/publisher/policyFindings/status"; //Get report status
 
 
-    //ZIP PARAMS
+    //ZIP PARAM/
     public static final long MAX_ZIP_SIZE_BYTES = 2147483648L;
     public static final String TEMP_FILE_NAME_TO_ZIP = "zippedSource";
     public static final String TEMP_FILE_NAME_TO_SCA_RESOLVER_RESULTS_ZIP = "ScaResolverResults";

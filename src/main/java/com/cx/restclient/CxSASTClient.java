@@ -10,6 +10,7 @@ import static com.cx.restclient.sast.utils.SASTParam.LINK_FORMAT;
 import static com.cx.restclient.sast.utils.SASTParam.SAST_CREATE_REMOTE_SOURCE_SCAN;
 import static com.cx.restclient.sast.utils.SASTParam.SAST_CREATE_REPORT;
 import static com.cx.restclient.sast.utils.SASTParam.SAST_CREATE_SCAN;
+import static com.cx.restclient.sast.utils.SASTParam.SAST_RETENTION_RATE;
 import static com.cx.restclient.sast.utils.SASTParam.SAST_EXCLUDE_FOLDERS_FILES_PATTERNS;
 import static com.cx.restclient.sast.utils.SASTParam.SAST_GET_PROJECT_SCANS;
 import static com.cx.restclient.sast.utils.SASTParam.SAST_GET_QUEUED_SCANS;
@@ -100,6 +101,7 @@ public class CxSASTClient extends LegacyClient implements Scanner {
     private Waiter<ResponseQueueScanStatus> sastWaiter;
     private static final String SCAN_ID_PATH_PARAM = "{scanId}";
     private static final String PROJECT_ID_PATH_PARAM = "{projectId}";
+
     private static final String SCAN_WITH_SETTINGS_URL = "sast/scanWithSettings";
     private static final String ENGINE_CONFIGURATION_ID_DEFAULT = "0";
     private long scanId;
@@ -218,6 +220,7 @@ public class CxSASTClient extends LegacyClient implements Scanner {
 
     CxSASTClient(CxScanConfig config, Logger log) throws MalformedURLException {
         super(config, log);
+
 
         int interval = config.getProgressInterval() != null ? config.getProgressInterval() : 20;
         int retry = config.getConnectionRetries() != null ? config.getConnectionRetries() : 3;
@@ -636,6 +639,7 @@ public class CxSASTClient extends LegacyClient implements Scanner {
 
         return createScanResponse.getId();
     }
+
 
     private CxID createRemoteSourceRequest(long projectId, HttpEntity entity, String sourceType, boolean isSSH) throws IOException {
         return httpClient.postRequest(String.format(SAST_CREATE_REMOTE_SOURCE_SCAN, projectId, sourceType, isSSH ? "ssh" : ""), isSSH ? null : CONTENT_TYPE_APPLICATION_JSON_V1,
