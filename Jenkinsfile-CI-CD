@@ -459,8 +459,8 @@ pipeline {
                                         }
                                         unstash "CxSAST-9.3-Logs"
                                     } catch (Exception e) {
-                                        kit.Warning_Msg("Could not stash CxSAST-9.3-Logs , error:\n" + e.toString())
-                                    }
+                    kit.Warning_Msg("Could not stash CxSAST-9.3-Logs, error:\n" + e.toString())
+                }
                                     deleteVm(provider, ipAddress93, vmName + "-9.3")
                                 }
                             }
