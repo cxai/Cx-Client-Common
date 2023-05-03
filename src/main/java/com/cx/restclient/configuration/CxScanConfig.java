@@ -20,6 +20,8 @@ public class CxScanConfig implements Serializable {
     private String cxOriginUrl;
     private CxVersion cxVersion;
 
+    private Integer projectRetentionRate;
+    private boolean enableDataRetention;
     private boolean disableCertificateValidation = false;
     private boolean useSSOLogin = false;
 
@@ -43,6 +45,7 @@ public class CxScanConfig implements Serializable {
     private Boolean forceScan = false;
     private String presetName;
     private Integer presetId;
+    private String postScanName;
     private String sastFolderExclusions;
     private String sastFilterPattern;
     private Integer sastScanTimeoutInMinutes;
@@ -129,6 +132,16 @@ public class CxScanConfig implements Serializable {
     private String customFields;
     
     private boolean isOverrideProjectSetting = false;
+
+    public boolean isOverrideRetentionRate() {
+        return isOverrideRetentionRate;
+    }
+
+    public void setOverrideRetentionRate(boolean overrideRetentionRate) {
+        isOverrideRetentionRate = overrideRetentionRate;
+    }
+
+    private boolean isOverrideRetentionRate = false;
 
     private Boolean enableSastBranching = false;
     
@@ -220,6 +233,13 @@ public class CxScanConfig implements Serializable {
 
     public Boolean getAvoidDuplicateProjectScans() {
         return avoidDuplicateProjectScans;
+    }
+    public boolean isEnableDataRetention() {
+        return enableDataRetention;
+    }
+
+    public void setEnableDataRetention(boolean enableDataRetention) {
+        this.enableDataRetention = enableDataRetention;
     }
 
     public String getSourceDir() {
@@ -372,9 +392,23 @@ public class CxScanConfig implements Serializable {
     public String getSastFolderExclusions() {
         return sastFolderExclusions;
     }
+    
+    public String getPostScanName() {
+		return postScanName;
+	}
+    public void setPostScanName(String postScanName) {
+		this.postScanName = postScanName;
+	}
 
     public void setSastFolderExclusions(String sastFolderExclusions) {
         this.sastFolderExclusions = sastFolderExclusions;
+    }
+    public Integer getProjectRetentionRate() {
+        return projectRetentionRate;
+    }
+
+    public void setProjectRetentionRate(Integer projectRetentionRate) {
+        this.projectRetentionRate = projectRetentionRate;
     }
 
     public String getSastFilterPattern() {

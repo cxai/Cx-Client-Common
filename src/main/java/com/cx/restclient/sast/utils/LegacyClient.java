@@ -9,13 +9,10 @@ import com.cx.restclient.exception.CxClientException;
 import com.cx.restclient.exception.CxHTTPClientException;
 import com.cx.restclient.httpClient.CxHttpClient;
 import com.cx.restclient.osa.dto.ClientType;
-import com.cx.restclient.sast.dto.CreateProjectRequest;
-import com.cx.restclient.sast.dto.CxNameObj;
-import com.cx.restclient.sast.dto.PostAction;
-import com.cx.restclient.sast.dto.Preset;
-import com.cx.restclient.sast.dto.Project;
+import com.cx.restclient.sast.dto.*;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.exception.ExceptionUtils;
+import org.apache.http.HttpEntity;
 import org.apache.http.client.HttpResponseException;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
@@ -43,7 +40,9 @@ public abstract class LegacyClient {
     public static final String PRESETNAME_PROJET_SETTING_DEFAULT = "Project Default";
     public static final String PRESETID_PROJET_SETTING_DEFAULT = "0";
     private static final Integer UNKNOWN_INT = -1;
-    
+
+    private static final String ID_PATH_PARAM = "{id}";
+
     protected CxHttpClient httpClient;
     protected CxScanConfig config;
     protected Logger log;
@@ -105,8 +104,11 @@ public abstract class LegacyClient {
 						throw new CxClientException(
 								"Branched project could not be created: " + config.getProjectName());
 					}else {
-						log.info("Created a project with ID {}", projectId);
-						setIsNewProject(true);
+                        log.info("Created a project with ID {}", projectId);
+                        if(config.isEnableDataRetention()){
+                            setRetentionRate(projectId);
+                        }
+                        setIsNewProject(true);
 					}
 				}
             }
@@ -116,8 +118,11 @@ public abstract class LegacyClient {
 				log.info("Project not found, creating a new one.: '{}' with Team '{}'", config.getProjectName(),
 						teamPath);
 				projectId = createNewProject(request, teamPath).getId();
-				log.info("Created a project with ID {}", projectId);
-				setIsNewProject(true);
+                log.info("Created a project with ID {}", projectId);
+                if(config.isEnableDataRetention()) {
+                    setRetentionRate(projectId);
+                }
+                setIsNewProject(true);
 			}
         } else {
             projectId = projects.get(0).getId();
@@ -221,6 +226,7 @@ public abstract class LegacyClient {
                 }
                 resolveEngineConfiguration();
                 resolveProjectId();
+                resolvePostScanAction();
             }
         } catch (Exception e) {
             throw new CxClientException(e);
@@ -391,6 +397,15 @@ public abstract class LegacyClient {
         log.info(String.format("preset name: %s preset id: %s", config.getPresetName(), config.getPresetId()));
     }
 
+	private void resolvePostScanAction() throws CxClientException, IOException {
+		if (config.getPostScanActionId() == null && !StringUtils.isEmpty(config.getPostScanName())) {
+			config.setPostScanActionId(getPostScanActionIdByName(config.getPostScanName()));
+			log.info(String.format("post scan action name: %s post scan action id: %s", config.getPostScanName(),
+					config.getPostScanActionId()));
+		} else {
+			log.info(String.format("Could not resolve post scan item ID from post scan action list"));
+		}
+	}
     public int getPresetIdByName(String presetName) throws CxClientException, IOException {
         List<Preset> allPresets = getPresetList();
         for (Preset preset : allPresets) {
@@ -416,7 +431,16 @@ public abstract class LegacyClient {
         configureTeamPath();
         return (List<PostAction>) httpClient.getRequest(SAST_CUSTOM_TASKS, CONTENT_TYPE_APPLICATION_JSON_V1, PostAction.class, 200, "post scan action list", true);
     }
-    
+
+	public int getPostScanActionIdByName(String name) throws CxClientException, IOException {
+		List<PostAction> allPostActionItems = getPostScanActionList();
+		for (PostAction postAction : allPostActionItems) {
+			if (postAction.getName().equalsIgnoreCase(name)) { // TODO caseSenesitive- checkkk
+				return postAction.getId();
+			}
+		}
+		throw new CxClientException("Could not resolve post scan item ID from post scan action list: " + name);
+	}
     private void printTeamPath() {
         try {
             this.teamPath = config.getTeamPath();
@@ -429,7 +453,20 @@ public abstract class LegacyClient {
         }
     }
 
-
+    private void setRetentionRate(long projectId) throws IOException {
+        DataRetentionSettingsDto retentionRequest = new DataRetentionSettingsDto(config.getProjectRetentionRate());
+        log.info("Sending request to set retentionRate for project with id {}",projectId);
+        String json = convertToJson(retentionRequest);
+        httpClient.setTeamPathHeader(teamPath);
+        HttpEntity entity = new StringEntity(json);
+        try{
+             httpClient.postRequest(SAST_RETENTION_RATE.replace(ID_PATH_PARAM, Long.toString(projectId)), CONTENT_TYPE_APPLICATION_JSON_V1, entity, CxID.class, 204, "Set retention Rate for project");
+                log.info("Set '{}' Retention Rate for project with project ID : '{}' ",config.getProjectRetentionRate(), projectId);
+              }catch (CxHTTPClientException exception){
+            log.info(exception.getMessage());
+            log.info("Fail to set  Retention Rate for project with project ID {}", projectId);
+            }
+    }
     public String getTeamNameById(String teamId) throws CxClientException, IOException {
         List<Team> allTeams = getTeamList();
         for (Team team : allTeams) {
@@ -498,8 +535,8 @@ public abstract class LegacyClient {
         httpClient.setTeamPathHeader(teamPath);    	
         StringEntity entity = new StringEntity(json, StandardCharsets.UTF_8);           	
         log.info("Creating branched project with name '{}' from existing project with ID {}", childProjectName, projectId);
-        try { 
-        	Project obj = httpClient.postRequest(PROJECT_BRANCH.replace("{id}", Long.toString(projectId)), CONTENT_TYPE_APPLICATION_JSON_V1, entity, Project.class, 201, "branch project");        	
+        try {
+        	Project obj = httpClient.postRequest(PROJECT_BRANCH.replace("{id}", Long.toString(projectId)), CONTENT_TYPE_APPLICATION_JSON_V1, entity, Project.class, 201, "branch project");
             if (obj != null) {
             	childProjectId = obj.getId();
             	return childProjectId;
