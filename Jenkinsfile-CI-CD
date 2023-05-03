@@ -454,9 +454,13 @@ pipeline {
                                 }
                                 if (ipAddress93 != null) {
                                     node(vmName + "-9.3") {
-                                        kit.zipStashInstallationLogs("CxSAST-9.3-Logs")
+                                        try{
+                                            kit.zipStashInstallationLogs("CxSAST-9.3-Logs")
+                                            unstash "CxSAST-9.3-Logs"
+                                        } catch (Exception e) {
+                                            kit.Warning_Msg("Could not stash CxSAST-9.3-Logs , error:\n" + e.toString())
+                                        }
                                     }
-                                    unstash "CxSAST-9.3-Logs"
                                     deleteVm(provider, ipAddress93, vmName + "-9.3")
                                 }
                             }
