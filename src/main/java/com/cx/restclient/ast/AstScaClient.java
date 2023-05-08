@@ -458,15 +458,21 @@ public class AstScaClient extends AstClient implements Scanner {
         int exitCode = SpawnScaResolver.runScaResolver(scaConfig.getPathToScaResolver(), scaConfig.getScaResolverAddParameters(),pathToResultJSONFileNew,pathToSASTResultJSONFileNew, log);
         if (exitCode == 0) {
         	log.info("Dependency resolution completed."); 
-        	String parentDir = pathToResultJSONFileNew.substring(0, pathToResultJSONFileNew.lastIndexOf(File.separator)); 
-        	String parentDirSast = pathToSASTResultJSONFileNew.substring(0, pathToSASTResultJSONFileNew.lastIndexOf(File.separator)); 
+			String parentDir = pathToResultJSONFileNew.substring(0, pathToResultJSONFileNew.lastIndexOf(File.separator));
+			String parentDirSast = "";
+			File destPartentSastDir = null;
+			if (!StringUtils.isEmpty(pathToSASTResultJSONFileNew)) {
+				parentDirSast = pathToSASTResultJSONFileNew.substring(0,
+						pathToSASTResultJSONFileNew.lastIndexOf(File.separator));
+				destPartentSastDir = new File(parentDirSast);
+			}
+
             String tempDirectory = parentDir +  File.separator + "tmp";
             String tempResultFile =  tempDirectory + File.separator + SASTParam.SCA_RESOLVER_RESULT_FILE_NAME;
             String tempSASTResultFile =  tempDirectory + File.separator + SASTParam.SAST_RESOLVER_RESULT_FILE_NAME;
             log.debug("Copying ScaResolver result files to temporary location.");
             File destTempDir = new File(tempDirectory);
 			File destParentDir = new File(parentDir);
-			File destPartentSastDir = new File(parentDirSast);
 			if (!destTempDir.exists()) {
 				Files.createDirectory(destTempDir.toPath());
 			}
@@ -488,7 +494,7 @@ public class AstScaClient extends AstClient implements Scanner {
 				FileUtils.deleteDirectory(destTempDir);
 				log.info("Deleted temp directory " + destTempDir.getAbsolutePath());
 			}
-			if (!pathToSASTResultJSONFileNew.equals(pathToSASTResultJSONFile)) {
+			if (!StringUtils.isEmpty(pathToSASTResultJSONFileNew) && !pathToSASTResultJSONFileNew.equals(pathToSASTResultJSONFile)) {
 				log.info("Deleting directory of result file {}", destPartentSastDir.getAbsolutePath());
 				FileUtils.deleteDirectory(destPartentSastDir);
 				log.info("Deleted directory of result file " + destPartentSastDir.getAbsolutePath());
