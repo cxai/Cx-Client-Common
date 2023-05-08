@@ -311,9 +311,9 @@ public class AstScaClient extends AstClient implements Scanner {
 				}
 
 				fileName = PDF_REPORT_NAME + "_" + now + "." + reportFormat.toLowerCase();
-				String pdfLink = SASTUtils.writePDFReport(scanReport, config.getReportsDir(), fileName, log);
+				writeReport(scanReport, fileName, log);
 				if (reportFormat.toLowerCase().equals("pdf")) {
-					scaResults.setScaPDFLink(pdfLink);
+					scaResults.setPDFReport(scanReport);
 					scaResults.setPdfFileName(fileName);
 				}
 

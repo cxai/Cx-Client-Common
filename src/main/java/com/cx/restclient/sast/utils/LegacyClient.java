@@ -402,8 +402,6 @@ public abstract class LegacyClient {
 			config.setPostScanActionId(getPostScanActionIdByName(config.getPostScanName()));
 			log.info(String.format("post scan action name: %s post scan action id: %s", config.getPostScanName(),
 					config.getPostScanActionId()));
-		} else {
-			log.info(String.format("Could not resolve post scan item ID from post scan action list"));
 		}
 	}
     public int getPresetIdByName(String presetName) throws CxClientException, IOException {
