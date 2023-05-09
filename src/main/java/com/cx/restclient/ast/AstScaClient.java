@@ -44,6 +44,7 @@ import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.entity.StringEntity;
 import org.apache.velocity.runtime.parser.node.SetExecutor;
+import org.awaitility.core.ConditionTimeoutException;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 
@@ -326,7 +327,11 @@ public class AstScaClient extends AstClient implements Scanner {
         }
         catch(IOException e) {
         	log.error(e.getMessage());
-        }
+        } catch(ConditionTimeoutException e) {
+        	log.error(e.getMessage());
+            scaResults = new AstScaResults();
+        	scaResults.setException(new CxClientException(e));
+        } 
         return new AstScaResults();
        // return scaResults;
     }
