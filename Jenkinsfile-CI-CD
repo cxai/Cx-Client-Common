@@ -93,9 +93,6 @@ pipeline {
         }
 
         stage('UT-IT & Sonar') {
-            when {
-                        expression { false }
-                    }
             parallel {
 
                 stage('Run Unit & Integration Tests') {
