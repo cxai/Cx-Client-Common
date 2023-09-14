@@ -12,7 +12,7 @@ def vmTemplate92 = "CxSDLC-Template-CxSAST-9-2"
 def ipAddress92
 def vmTemplate93 = "CxSDLC-Template-CxSAST-9-3"
 def ipAddress93
-def vmTemplate94 = "CxSDLC-Template-CxSAST-9-4"
+def vmTemplate94 = "SmokeDynamicUpgrade-2012-9.4.0-Java17-dotnet6-ATDT-newPass_noMnO"
 def ipAddress94
 def vmTemplate95 = "CxSDLC-Template-CxSAST-9-5"
 def ipAddress95
