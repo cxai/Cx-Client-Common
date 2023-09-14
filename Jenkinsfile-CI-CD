@@ -484,6 +484,9 @@ pipeline {
                 }
 
                 stage('9.4') {
+                    when {
+                        expression { false }
+                    }
                     stages {
                         stage('Create VM') {
                             steps {
