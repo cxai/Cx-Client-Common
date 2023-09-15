@@ -145,6 +145,7 @@ pipeline {
 
         stage('Install CxCommon in Local Repository') {
             when {
+                echo "CHANGE_TARGET : ${CHANGE_TARGET}"
                 expression {
                     BRANCH_NAME == 'master' || BRANCH_NAME.startsWith("PR-") && CHANGE_TARGET == 'master'
                 }
