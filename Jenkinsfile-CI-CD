@@ -89,7 +89,6 @@ pipeline {
                 stage('Run Unit & Integration Tests') {
                     steps {
                         script {
-                            echo "CHANGE_TARGET : ${CHANGE_TARGET}"
                             sh "docker run --rm --name test-${BUILD_TAG} -v /root/.m2:/root/.m2 -v ${workspace}:/usr/src/cx-common -w /usr/src/cx-common maven:3.6.1-jdk-8-alpine mvn test -Dcxcommon.version=${env.cxCommonVersion}"
                         }
                     }
@@ -147,10 +146,14 @@ pipeline {
         stage('Install CxCommon in Local Repository') {
             when {
                 expression {
-                    BRANCH_NAME == 'master' || BRANCH_NAME.startsWith("PR-") && CHANGE_TARGET == 'master'
+                    BRANCH_NAME == 'master' || BRANCH_NAME.startsWith("PR-") 
                 }
             }
             steps {
+                echo env.BRANCH_NAME
+                echo env.CHANGE_TARGET
+                echo BRANCH_NAME
+                echo CHANGE_TARGET
                 sh "docker run --rm --memory 2gb --name install-cx-common-${BUILD_TAG} -v maven-repo:/root/.m2 -v ${workspace}/target/cx-client-common-${env.cxCommonVersion}.jar:/usr/src/artifact.jar maven:3.6.1-jdk-8-alpine \
                     mvn -q install:install-file -Dfile=/usr/src/artifact.jar -DgroupId=com.checkmarx -DartifactId=cx-client-common -Dversion=${env.cxCommonVersion} -Dpackaging=jar"
                 sh "docker run --rm --memory 2gb --name install-cx-common-${BUILD_TAG} -v maven-repo:/root/.m2 -v ${workspace}/pom.xml:/usr/src/pom.xml maven:3.6.1-jdk-8-alpine \
