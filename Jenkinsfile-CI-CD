@@ -45,7 +45,6 @@ pipeline {
                 script {
                     env.PIPELINE_STATUS = "Success"
                     env.STAGE_NAME_FAILED = "None"
-                    echo "CHANGE_TARGET : ${CHANGE_TARGET}"
                     if (BRANCH_NAME == 'master') {
                         Calendar cal = Calendar.getInstance(Locale.US)
                         int quarter = (cal.get(Calendar.MONTH) / 3) + 1
@@ -90,6 +89,7 @@ pipeline {
                 stage('Run Unit & Integration Tests') {
                     steps {
                         script {
+                            echo "CHANGE_TARGET : ${CHANGE_TARGET}"
                             sh "docker run --rm --name test-${BUILD_TAG} -v /root/.m2:/root/.m2 -v ${workspace}:/usr/src/cx-common -w /usr/src/cx-common maven:3.6.1-jdk-8-alpine mvn test -Dcxcommon.version=${env.cxCommonVersion}"
                         }
                     }
