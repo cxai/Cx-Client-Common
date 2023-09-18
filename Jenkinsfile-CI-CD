@@ -10,7 +10,7 @@ def vmTemplate94 = "CxSDLC-Template-CxSAST-9-4"
 def ipAddress94
 def vmTemplate95 = "CxSDLC-Template-CxSAST-9-5"
 def ipAddress95
-def vmTemplate96 = "CxSDLC-Template-CxSAST-9-6-new"
+def vmTemplate96 = "CxSDLC-Template-CxSAST-9-6-1"
 def ipAddress96
 def ram = "12000"
 def cpu = "8"
