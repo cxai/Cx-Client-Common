@@ -146,7 +146,7 @@ pipeline {
         stage('Install CxCommon in Local Repository') {
             when {
                 expression {
-                    BRANCH_NAME == 'master' || BRANCH_NAME.startsWith("PR-") 
+                    BRANCH_NAME == 'master' || BRANCH_NAME.startsWith("PR-")  && CHANGE_TARGET == 'master'
                 }
             }
             steps {
@@ -160,7 +160,7 @@ pipeline {
         stage('System Tests') {
             when {
                 expression {
-                    BRANCH_NAME == 'master' || BRANCH_NAME.startsWith("PR-") 
+                    BRANCH_NAME == 'master' || BRANCH_NAME.startsWith("PR-") && CHANGE_TARGET == 'master'
                 }
             }
             parallel {
