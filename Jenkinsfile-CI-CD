@@ -218,7 +218,7 @@ pipeline {
                                 dir("${workspace}/9.4/Checkmarx-System-Test") {
                                     junit '**/PluginsCommonClient/target/surefire-reports/**/*.xml'
                                 }
-                                if (ipAddress93 != null) {
+                                if (ipAddress94 != null) {
                                     try {
                                         node(vmName + "-9.4") {
                                             kit.zipStashInstallationLogs("CxSAST-9.4-Logs")
@@ -296,7 +296,7 @@ pipeline {
                                 dir("${workspace}/9.5/Checkmarx-System-Test") {
                                     junit '**/PluginsCommonClient/target/surefire-reports/**/*.xml'
                                 }
-                                if (ipAddress93 != null) {
+                                if (ipAddress95 != null) {
                                     try {
                                         node(vmName + "-9.5") {
                                             kit.zipStashInstallationLogs("CxSAST-9.5-Logs")
@@ -374,7 +374,7 @@ pipeline {
                                 dir("${workspace}/9.6/Checkmarx-System-Test") {
                                     junit '**/PluginsCommonClient/target/surefire-reports/**/*.xml'
                                 }
-                                if (ipAddress93 != null) {
+                                if (ipAddress96 != null) {
                                     try {
                                         node(vmName + "-9.6") {
                                             kit.zipStashInstallationLogs("CxSAST-9.6-Logs")
