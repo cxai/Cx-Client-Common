@@ -600,8 +600,16 @@ public class CxHttpClient implements Closeable {
     //POST REQUEST
     public <T> T postRequest(String relPath, String contentType, HttpEntity entity, Class<T> responseType, int expectStatus, String failedMsg) throws IOException {
         HttpPost post = new HttpPost(rootUri + relPath);
-        return request(post, contentType, entity, responseType, expectStatus, failedMsg, false, true);
-    }
+			return request(post, contentType, entity, responseType, expectStatus, failedMsg, false, true);
+	}
+    
+	// POST REQUEST
+	public <T> T postRequest(String relPath, String contentType, String acceptHeader, HttpEntity entity,
+			Class<T> responseType, int expectStatus, String failedMsg) throws IOException {
+		HttpPost post = new HttpPost(rootUri + relPath);
+		post.addHeader("Accept", acceptHeader);
+		return request(post, contentType, entity, responseType, expectStatus, failedMsg, false, true);
+	}
 
     //PUT REQUEST
     public <T> T putRequest(String relPath, String contentType, HttpEntity entity, Class<T> responseType, int expectStatus, String failedMsg) throws IOException {
